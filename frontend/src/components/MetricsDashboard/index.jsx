@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
+import { Alert, AlertDescription } from '../../components/ui/alert';
+
+// Define API base URL directly since we're in a browser environment
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   <Card>
@@ -38,50 +43,110 @@ const QueueTable = ({ queueData }) => (
   </div>
 );
 
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-6">
+    <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+  </div>
+);
+
 const MetricsDashboard = () => {
-  const [timeRange, setTimeRange] = useState('Last 7 Days');
+  const [timeRange, setTimeRange] = useState('7');
   const [percentile, setPercentile] = useState('p50');
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const processData = () => {
-    // Simulate processing of dashboard data
-    const chartData = [
-      { date: '2025-01-14', total: 5, failed: 2, flaky: 1 },
-      { date: '2025-01-15', total: 50, failed: 35, flaky: 3 },
-      { date: '2025-01-16', total: 60, failed: 42, flaky: 2 },
-      { date: '2025-01-17', total: 37, failed: 25, flaky: 4 },
-      { date: '2025-01-18', total: 12, failed: 5, flaky: 1 },
-      { date: '2025-01-19', total: 10, failed: 3, flaky: 0 },
-      { date: '2025-01-20', total: 33, failed: 20, flaky: 2 },
-    ];
-
-    const queueData = [
-      { count: 91, queueTime: '5.7h', machineType: 'linux.room.gpu.mi300.2' },
-      { count: 10, queueTime: '4.1h', machineType: 'linux.room.gpu.mi300.4' },
-    ];
-
-    return {
-      chartData,
-      queueData,
-      metrics: {
-        redOnMain: '60.7',
-        redOnMainFlaky: '2.8',
-        forceMergesFailed: '16.2',
-        forceMergesImpatience: '8.3',
-        timeToRedSignal: '13',
-        timeToRedSignalP75: '5',
-        viableStrictLag: '8.2h',
-        lastMainPush: '17.4m',
-        lastDockerBuild: '2.4h',
-        reverts: '22',
-        pullTrunkTTS: '3.1h'
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${API_BASE_URL}/metrics/dashboard?days=${timeRange}&percentile=${percentile}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
-  };
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      setData(result);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [timeRange, percentile]);
 
-  const { chartData, queueData, metrics } = processData();
+  useEffect(() => {
+    fetchDashboardData();
+    
+    // Set up polling interval
+    const interval = setInterval(fetchDashboardData, 300000); // Refresh every 5 minutes
+    
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
+
+  // For development/testing - use mock data if API is not available
+  useEffect(() => {
+    if (!data && !loading && error) {
+      setData({
+        chartData: [
+          { date: '2025-01-14', total: 5, failed: 2, flaky: 1 },
+          { date: '2025-01-15', total: 50, failed: 35, flaky: 3 },
+          { date: '2025-01-16', total: 60, failed: 42, flaky: 2 },
+          { date: '2025-01-17', total: 37, failed: 25, flaky: 4 },
+          { date: '2025-01-18', total: 12, failed: 5, flaky: 1 },
+          { date: '2025-01-19', total: 10, failed: 3, flaky: 0 },
+          { date: '2025-01-20', total: 33, failed: 20, flaky: 2 },
+        ],
+        queueData: [
+          { count: 91, queueTime: '5.7h', machineType: 'linux.room.gpu.mi300.2' },
+          { count: 10, queueTime: '4.1h', machineType: 'linux.room.gpu.mi300.4' },
+        ],
+        metrics: {
+          redOnMain: '60.7',
+          redOnMainFlaky: '2.8',
+          forceMergesFailed: '16.2',
+          forceMergesImpatience: '8.3',
+          timeToRedSignal: '13',
+          timeToRedSignalP75: '5',
+          viableStrictLag: '8.2h',
+          lastMainPush: '17.4m',
+          lastDockerBuild: '2.4h',
+          reverts: '22',
+          pullTrunkTTS: '3.1h'
+        }
+      });
+      setError(null);
+    }
+  }, [data, loading, error]);
+
+  if (loading && !data) {
+    return <LoadingSpinner />;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const { chartData, queueData, metrics } = data;
 
   return (
     <div className="p-6 space-y-6">
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>
+            {error} - Using mock data for preview
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {/* Header and Controls */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">CI Metrics</h1>
@@ -91,9 +156,9 @@ const MetricsDashboard = () => {
             onChange={(e) => setTimeRange(e.target.value)}
             className="border p-2 rounded"
           >
-            <option>Last 7 Days</option>
-            <option>Last 14 Days</option>
-            <option>Last 30 Days</option>
+            <option value="7">Last 7 Days</option>
+            <option value="14">Last 14 Days</option>
+            <option value="30">Last 30 Days</option>
           </select>
           <select 
             value={percentile}
