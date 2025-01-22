@@ -13,6 +13,70 @@ const WaterfallView = () => {
   // Mock data matching the screenshot format
   const commits = [
     {
+      time: '2:31 pm',
+      sha: 'b812095',
+      commit: 'Fix tests broken by #145176 (#145393)',
+      pr: '#145393',
+      author: 'aorenste',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': '?'
+      }
+    },
+    {
+      time: '2:15 pm',
+      sha: '70ccbad',
+      commit: '[MPSInductor] Add `gamma` op (#145341)',
+      pr: '#145341',
+      author: 'malfet',
+      results: {
+        'Linux': 'X',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': 'X'
+      }
+    },
+    {
+      time: '2:01 pm',
+      sha: '3917053',
+      commit: '[audio hash update] update the pinned audio hash',
+      pr: '#145328',
+      author: 'pytorchupdates',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': 'X',
+        'Lint': '?',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '1:45 pm',
+      sha: '95ff9f0',
+      commit: '[Doc] Add period at the end of the sentence',
+      pr: '#145384',
+      author: 'malfet',
+      results: {
+        'Linux': 'X',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': 'X',
+        'Lint': 'X',
+        'Test': 'O'
+      }
+    },
+    {
       time: '1:31 pm',
       sha: '3032df2',
       commit: '[BE] Simplify set add with set update',
