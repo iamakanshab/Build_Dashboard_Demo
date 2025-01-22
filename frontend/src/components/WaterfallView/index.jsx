@@ -13,6 +13,134 @@ const WaterfallView = () => {
   // Mock data matching the screenshot format
   const commits = [
     {
+      time: '3:45 pm',
+      sha: 'f2e1d9a',
+      commit: '[Functorch] Fix vmap broadcasting for scalar tensors',
+      pr: '#145160',
+      author: 'zou3519',
+      results: {
+        'Linux': 'O',
+        'Win': '?',
+        'Mac': '?',
+        'ROC': '~',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': '?'
+      }
+    },
+    {
+      time: '3:32 pm',
+      sha: 'c4d2e8b',
+      commit: '[dynamo] Improve error messages for graph breaks',
+      pr: '#145159',
+      author: 'jansel',
+      results: {
+        'Linux': 'X',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'X'
+      }
+    },
+    {
+      time: '3:15 pm',
+      sha: 'b9a7f12',
+      commit: '[CI] Update CUDA 12.1 build environment',
+      pr: '#145158',
+      author: 'seemethere',
+      results: {
+        'Linux': 'O',
+        'Win': 'O',
+        'Mac': '~',
+        'ROC': '~',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '3:01 pm',
+      sha: 'e7c6d4f',
+      commit: '[MPS] Fix memory leak in pooling operations',
+      pr: '#145157',
+      author: 'malfet',
+      results: {
+        'Linux': '~',
+        'Win': '~',
+        'Mac': 'X',
+        'ROC': '~',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'X'
+      }
+    },
+    {
+      time: '2:55 pm',
+      sha: 'a1b2c3d',
+      commit: '[Doc] Update distributed training tutorial',
+      pr: '#145156',
+      author: 'mrshenli',
+      results: {
+        'Linux': 'O',
+        'Win': 'O',
+        'Mac': 'O',
+        'ROC': '~',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '2:43 pm',
+      sha: 'd4e5f6a',
+      commit: '[Autograd] Fix gradient computation for complex tensors',
+      pr: '#145155',
+      author: 'kshitij12345',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'F'
+      }
+    },
+    {
+      time: '2:31 pm',
+      sha: '1a2b3c4',
+      commit: '[ROCm] Update HIP compiler version',
+      pr: '#145154',
+      author: 'jeffdaily',
+      results: {
+        'Linux': 'O',
+        'Win': '~',
+        'Mac': '~',
+        'ROC': 'X',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'X'
+      }
+    },
+    {
+      time: '2:22 pm',
+      sha: '7g8h9i0',
+      commit: '[Test] Add benchmarks for transformer inference',
+      pr: '#145153',
+      author: 'chunyuan-w',
+      results: {
+        'Linux': 'O',
+        'Win': 'O',
+        'Mac': 'O',
+        'ROC': 'O',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'O'
+      }
+    },
+    {
       time: '2:31 pm',
       sha: 'b812095',
       commit: 'Fix tests broken by #145176 (#145393)',
@@ -139,7 +267,248 @@ const WaterfallView = () => {
         'Lint': 'O',
         'Test': '?'
       }
+    },
+    {
+      time: '12:11 pm',
+      sha: '0940eb6',
+      commit: 'Reverting the PR adding Kleidiai-based int4 support',
+      pr: '#145392',
+      author: 'albanD',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': '?'
+      }
+    },
+    {
+      time: '11:56 am',
+      sha: 'e8e3c03',
+      commit: '[Test][Inductor] Fix test_tma_graph_breaks',
+      pr: '#145271',
+      author: 'Aidyn-A',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': 'X',
+        'Lint': 'O',
+        'Test': 'F'
+      }
+    },
+    {
+      time: '11:33 am',
+      sha: 'ac8ddf1',
+      commit: '[export][be] Clean up local imports from export',
+      pr: '#145287',
+      author: 'zhxchen17',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': 'O',
+        'ROC': 'X',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '11:09 am',
+      sha: '30717d2',
+      commit: 'Move Dynamo test to skip from expected_failures',
+      pr: '#145390',
+      author: 'zou3519',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': '?'
+      }
+    },
+    {
+      time: '11:06 am',
+      sha: '0bff377',
+      commit: 'Align CPU behavior with CUDA for `ConvTranpose`',
+      pr: '#142859',
+      author: 'chunyuan-w',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': 'O',
+        'ROC': 'O',
+        'Doc': 'X',
+        'Lint': 'X',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '10:55 am',
+      sha: 'j4k5l6m',
+      commit: '[AMP] Fix scaling for mixed precision training',
+      pr: '#145151',
+      author: 'masahi',
+      results: {
+        'Linux': 'O',
+        'Win': 'O',
+        'Mac': 'O',
+        'ROC': 'O',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '10:41 am',
+      sha: 'n7m8p9q',
+      commit: '[Inductor] Support more fusion patterns',
+      pr: '#145150',
+      author: 'jansel',
+      results: {
+        'Linux': 'X',
+        'Win': 'X',
+        'Mac': 'X',
+        'ROC': 'X',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'X'
+      }
+    },
+    {
+      time: '10:32 am',
+      sha: 'r1s2t3u',
+      commit: '[Doc] Fix broken links in C++ API docs',
+      pr: '#145149',
+      author: 'malfet',
+      results: {
+        'Linux': 'O',
+        'Win': 'O',
+        'Mac': 'O',
+        'ROC': '~',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': '~'
+      }
+    },
+    {
+      time: '10:15 am',
+      sha: 'v4w5x6y',
+      commit: '[BC Breaking] Update deprecated torch.fft APIs',
+      pr: '#145148',
+      author: 'peterbell10',
+      results: {
+        'Linux': 'O',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': 'O',
+        'Lint': 'X',
+        'Test': 'F'
+      }
+    },
+    {
+      time: '10:03 am',
+      sha: 'z9a8b7c',
+      commit: '[Quantization] Add support for per-channel quantization',
+      pr: '#145147',
+      author: 'jerryzh168',
+      results: {
+        'Linux': 'O',
+        'Win': '?',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': '?'
+      }
+    },
+    {
+      time: '9:55 am',
+      sha: 'd6e5f4g',
+      commit: '[CUDA] Optimize memory allocator for large tensors',
+      pr: '#145146',
+      author: 'soumith',
+      results: {
+        'Linux': 'O',
+        'Win': 'O',
+        'Mac': '~',
+        'ROC': 'O',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '9:41 am',
+      sha: 'h3i2j1k',
+      commit: '[NN] Add Mamba layer implementation',
+      pr: '#145145',
+      author: 'albanD',
+      results: {
+        'Linux': 'X',
+        'Win': 'X',
+        'Mac': '?',
+        'ROC': 'X',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'X'
+      }
+    },
+    {
+      time: '9:32 am',
+      sha: 'l4m5n6o',
+      commit: '[Build] Fix Windows MSVC compilation errors',
+      pr: '#145144',
+      author: 'ezyang',
+      results: {
+        'Linux': '~',
+        'Win': 'O',
+        'Mac': '~',
+        'ROC': '~',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'O'
+      }
+    },
+    {
+      time: '9:15 am',
+      sha: 'p7q8r9s',
+      commit: '[Distributed] Improve error handling in NCCL backend',
+      pr: '#145143',
+      author: 'mrshenli',
+      results: {
+        'Linux': 'O',
+        'Win': 'O',
+        'Mac': 'O',
+        'ROC': 'O',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': 'F'
+      }
+    },
+    {
+      time: '9:01 am',
+      sha: 't0u1v2w',
+      commit: '[Test] Add more coverage for autograd edge cases',
+      pr: '#145142',
+      author: 'kshitij12345',
+      results: {
+        'Linux': 'O',
+        'Win': '?',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': 'O',
+        'Lint': 'O',
+        'Test': '?'
+      }
     }
+    
   ];
 
   // Define workflow columns matching the screenshot
