@@ -1,2 +1,61 @@
-2025-01-22 14:05:01,053 - app - ERROR - Database connection error: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]TCP Provider: Timeout error [258].  (258) (SQLDriverConnect); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Login timeout expired (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Invalid connection string attribute (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Unable to complete login process due to delay in prelogin response (258)')
-2025-01-22 14:05:01,057 - app - ERROR - Database error: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]TCP Provider: Timeout error [258].  (258) (SQLDriverConnect); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Login timeout expired (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Invalid connection string attribute (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Unable to complete login process due to delay in prelogin response (258)')
+2025-01-22 14:57:33,188 - app - ERROR - Dashboard error: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
+Traceback (most recent call last):
+  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
+    cursor.execute("""
+pyodbc.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
+2025-01-22 14:57:33,369 - app - DEBUG - Connection closed successfully
+2025-01-22 14:57:33,377 - app - DEBUG - Attempting database connection...
+2025-01-22 14:57:33,377 - app - DEBUG - Starting connection attempt...
+2025-01-22 14:57:33,393 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
+2025-01-22 14:57:33,393 - app - DEBUG - Building connection string...
+2025-01-22 14:57:33,393 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
+2025-01-22 14:57:33,393 - app - DEBUG - Attempting pyodbc.connect...
+2025-01-22 14:57:33,475 - app - DEBUG - Connection successful
+2025-01-22 14:57:33,475 - app - DEBUG - Query date range: 2025-01-15 14:57:33.475203 to 2025-01-22 14:57:33.475203
+2025-01-22 14:57:33,475 - app - DEBUG - Executing daily workflow query...
+2025-01-22 14:57:33,563 - app - DEBUG - Retrieved 8 days of workflow data
+2025-01-22 14:57:33,571 - app - DEBUG - Executing metrics query...
+2025-01-22 14:57:33,739 - app - ERROR - Dashboard error: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
+Traceback (most recent call last):
+  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
+    cursor.execute("""
+pyodbc.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
+2025-01-22 14:57:33,912 - app - DEBUG - Connection closed successfully
+2025-01-22 14:59:42,562 - app - INFO - Environment variables check:
+2025-01-22 14:59:42,562 - app - INFO - DB_PASSWORD set: False
+2025-01-22 14:59:42,562 - app - INFO - Starting Flask application...
+2025-01-22 14:59:43,763 - app - INFO - Initial database connection test successful
+2025-01-22 15:00:44,838 - app - DEBUG - Attempting database connection...
+2025-01-22 15:00:44,838 - app - DEBUG - Starting connection attempt...
+2025-01-22 15:00:44,838 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
+2025-01-22 15:00:44,838 - app - DEBUG - Building connection string...
+2025-01-22 15:00:44,838 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
+2025-01-22 15:00:44,838 - app - DEBUG - Attempting pyodbc.connect...
+2025-01-22 15:00:44,949 - app - DEBUG - Connection successful
+2025-01-22 15:00:44,954 - app - DEBUG - Query date range: 2025-01-15 15:00:44.954019 to 2025-01-22 15:00:44.954019
+2025-01-22 15:00:44,954 - app - DEBUG - Executing daily workflow query...
+2025-01-22 15:00:45,157 - app - DEBUG - Retrieved 8 days of workflow data
+2025-01-22 15:00:45,157 - app - DEBUG - Executing metrics query...
+2025-01-22 15:00:45,313 - app - ERROR - Dashboard error: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
+Traceback (most recent call last):
+  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
+    cursor.execute("""
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
+2025-01-22 15:00:45,490 - app - DEBUG - Connection closed successfully
+2025-01-22 15:00:45,490 - app - DEBUG - Attempting database connection...
+2025-01-22 15:00:45,490 - app - DEBUG - Starting connection attempt...
+2025-01-22 15:00:45,510 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
+2025-01-22 15:00:45,510 - app - DEBUG - Building connection string...
+2025-01-22 15:00:45,510 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
+2025-01-22 15:00:45,510 - app - DEBUG - Attempting pyodbc.connect...
+2025-01-22 15:00:45,590 - app - DEBUG - Connection successful
+2025-01-22 15:00:45,590 - app - DEBUG - Query date range: 2025-01-15 15:00:45.590981 to 2025-01-22 15:00:45.590981
+2025-01-22 15:00:45,590 - app - DEBUG - Executing daily workflow query...
+2025-01-22 15:00:45,683 - app - DEBUG - Retrieved 8 days of workflow data
+2025-01-22 15:00:45,683 - app - DEBUG - Executing metrics query...
+2025-01-22 15:00:45,865 - app - ERROR - Dashboard error: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
+Traceback (most recent call last):
+  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
+    cursor.execute("""
+pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
+2025-01-22 15:00:46,073 - app - DEBUG - Connection closed successfully

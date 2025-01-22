@@ -7,16 +7,23 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger('ODBC')
+
 app = Flask(__name__)
 CORS(app)
 connection_string = (
     "Driver={ODBC Driver 17 for SQL Server};"
-    "Server=server_ip,1433;"
-    "Database=master;"
-    "UID=test_user;"
-    "PWD=test_password;"
+    "Server=dashboard-backend.database.windows.net,1433;"
+    "Database=dashboard-backend;"
+    "UID=CloudSA9134000b;"  # Use the correct username
+    "PWD=BackendPassw0rd;"
+    "Connect_Timeout=30;"    # Correct parameter name
+    "Login_Timeout=30;"      # Correct parameter name
+    "Encrypt=yes;"          # Required for Azure SQL
+    "TrustServerCertificate=no;"  # Required for Azure SQL
 )
-
 # Enhanced logging setup
 logging.basicConfig(level=logging.DEBUG)
 handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=3)
@@ -32,23 +39,49 @@ app.logger.info("Environment variables check:")
 app.logger.info(f"DB_PASSWORD set: {'DB_PASSWORD' in os.environ}")
 
 # Database configuration
+# def get_db_connection(pwd):
+#     try:
+#         server = 'dashboard-backend.database.windows.net'
+#         database = 'dashboard-backend'
+#         username = 'CloudSA9134000b'
+#         driver = '{ODBC Driver 17 for SQL Server}'
+        
+#         app.logger.debug("Building connection string...")
+#         connection = pyodbc.connect(connection_string)
+#         app.logger.info("Database connection successful")
+#         return connection
+#     except Exception as e:
+#         app.logger.error(f"Database connection error: {str(e)}")
+#         raise
+
 def get_db_connection(pwd):
     try:
-        server = 'dashboard-backend.database.windows.net'
-        database = 'dashboard-backend'
-        username = 'CloudSA9134000b'
-        driver = '{ODBC Driver 17 for SQL Server}'
-        
-        app.logger.debug("Building connection string...")
-        connection = pyodbc.connect(
-            f'DRIVER={driver};SERVER={server};PORT=1433;DATABASE={database};UID={username};PWD={pwd}'
-        )
+        app.logger.debug("Attempting database connection...")
+        connection = pyodbc.connect(connection_string)
         app.logger.info("Database connection successful")
         return connection
-    except Exception as e:
+    except pyodbc.Error as e:
         app.logger.error(f"Database connection error: {str(e)}")
         raise
-
+def get_db_connection(pwd):
+    try:
+        app.logger.debug("Starting connection attempt...")
+        app.logger.debug(f"Using driver versions: {[x for x in pyodbc.drivers() if 'SQL Server' in x]}")
+        
+        app.logger.debug("Building connection string...")
+        # Print connection string with password masked
+        debug_conn_string = connection_string.replace(pwd, '***')
+        app.logger.debug(f"Connection string (masked): {debug_conn_string}")
+        
+        app.logger.debug("Attempting pyodbc.connect...")
+        connection = pyodbc.connect(connection_string, timeout=30)
+        
+        app.logger.debug("Connection successful")
+        return connection
+    except pyodbc.Error as e:
+        app.logger.error(f"Detailed connection error: {str(e)}")
+        app.logger.error(f"Error state: {e.args[0]}")
+        raise
 # Database connection middleware
 def require_db_connection(f):
     @wraps(f)
@@ -114,9 +147,8 @@ def get_dashboard_metrics(conn):
             SELECT 
                 CONVERT(date, createtime) as date,
                 COUNT(*) as total,
-                SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed,
-                SUM(CASE WHEN is_flaky = 1 THEN 1 ELSE 0 END) as flaky
-            FROM workflow_runs
+                SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed
+            FROM workflowruns
             WHERE createtime BETWEEN ? AND ?
             GROUP BY CONVERT(date, createtime)
             ORDER BY date
@@ -127,44 +159,43 @@ def get_dashboard_metrics(conn):
             chart_data.append({
                 'date': row.date.strftime('%Y-%m-%d'),
                 'total': row.total,
-                'failed': row.failed,
-                'flaky': row.flaky
+                'failed': row.failed
             })
         app.logger.debug(f"Retrieved {len(chart_data)} days of workflow data")
 
-        # Fetch current queue status
-        app.logger.debug("Executing queue status query...")
-        cursor.execute("""
-            SELECT 
-                machine_type,
-                COUNT(*) as count,
-                AVG(queue_time) as avg_queue_time
-            FROM queued_jobs
-            WHERE status = 'queued'
-            GROUP BY machine_type
-        """)
+        # # Fetch current queue status
+        # app.logger.debug("Executing queue status query...")
+        # cursor.execute("""
+        #     SELECT 
+        #         machine_type,
+        #         COUNT(*) as count,
+        #         AVG(queue_time) as avg_queue_time
+        #     FROM queued_jobs
+        #     WHERE status = 'queued'
+        #     GROUP BY machine_type
+        # """)
         
-        queue_data = []
-        for row in cursor.fetchall():
-            queue_time_hours = row.avg_queue_time / 3600
-            queue_data.append({
-                'machineType': row.machine_type,
-                'count': row.count,
-                'queueTime': f"{queue_time_hours:.1f}h"
-            })
-        app.logger.debug(f"Retrieved queue data for {len(queue_data)} machine types")
+        # queue_data = []
+        # for row in cursor.fetchall():
+        #     queue_time_hours = row.avg_queue_time / 3600
+        #     queue_data.append({
+        #         'machineType': row.machine_type,
+        #         'count': row.count,
+        #         'queueTime': f"{queue_time_hours:.1f}h"
+        #     })
+        # app.logger.debug(f"Retrieved queue data for {len(queue_data)} machine types")
 
         # Fetch key metrics
         app.logger.debug("Executing metrics query...")
         cursor.execute("""
             SELECT
-                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflow_runs), 0) AS DECIMAL(5,1))
-                FROM workflow_runs WHERE conclusion = 'failure' AND is_flaky = 0) as red_on_main,
+                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0) AS DECIMAL(5,1))
+                FROM workflowruns WHERE conclusion = 'failure') as red_on_main,
                 
-                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflow_runs), 0) AS DECIMAL(5,1))
-                FROM workflow_runs WHERE is_flaky = 1) as red_on_main_flaky,
+                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0) AS DECIMAL(5,1))
+                FROM workflowruns) as red_on_main_flaky,
                 
-                (SELECT AVG(time_to_red_signal) FROM workflow_runs WHERE conclusion = 'failure') as avg_ttrs,
+                --(SELECT AVG(time_to_red_signal) FROM workflowruns WHERE conclusion = 'failure') as avg_ttrs,
                 
                 (SELECT time_diff FROM viable_strict_status WHERE id = (SELECT MAX(id) FROM viable_strict_status)) as viable_strict_lag,
                 
@@ -196,7 +227,7 @@ def get_dashboard_metrics(conn):
 
 @app.route('/api/metrics/workflow-runs', methods=['GET'])
 @require_db_connection
-def get_workflow_runs(conn):
+def get_workflowruns(conn):
     try:
         days = request.args.get('days', default=7, type=int)
         cursor = conn.cursor()
@@ -210,9 +241,8 @@ def get_workflow_runs(conn):
                 workflow_id,
                 createtime,
                 conclusion,
-                is_flaky,
                 time_to_red_signal
-            FROM workflow_runs
+            FROM workflowruns
             WHERE createtime BETWEEN ? AND ?
             ORDER BY createtime DESC
         """, (start_date, end_date))
@@ -223,7 +253,6 @@ def get_workflow_runs(conn):
                 'workflowId': row.workflow_id,
                 'createTime': row.createtime.isoformat(),
                 'conclusion': row.conclusion,
-                'isFlaky': bool(row.is_flaky),
                 'timeToRedSignal': row.time_to_red_signal
             })
         
@@ -267,9 +296,17 @@ def get_queue_status(conn):
         app.logger.error(f"Queue status error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+
 if __name__ == '__main__':
     app.logger.info("Starting Flask application...")
+    # Test database connection on startup
+    try:
+        test_conn = pyodbc.connect(connection_string)
+        test_conn.close()
+        app.logger.info("Initial database connection test successful")
+    except pyodbc.Error as e:
+        app.logger.error(f"Initial database connection test failed: {str(e)}")
+    
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_ENV') == 'development'
-    
     app.run(host='0.0.0.0', port=port, debug=debug)
