@@ -1,300 +1,144 @@
-# app.py
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, jsonify
 from flask_cors import CORS
-import sqlite3
-import datetime
-import time
+from datetime import datetime, timedelta
+import pyodbc
 import os
+from dotenv import load_dotenv
 
-class Dashboard:
-    def __init__(self, db_file, repo, port=5000):
-        self.repo_path = repo
-        self.app = Flask(__name__, static_folder='../frontend/build')
-        CORS(self.app)
-        self.db_file = db_file
-        self.port = port
-        self._register_routes()
+# Load environment variables
+load_dotenv()
 
-    def _get_db_connection(self):
-        """Create a database connection"""
-        conn = sqlite3.connect(self.db_file)
-        conn.row_factory = sqlite3.Row  # This enables name-based access to columns
-        return conn
+app = Flask(__name__)
+CORS(app)
 
-    def _register_routes(self):
-        @self.app.route('/api/waterfall')
-        def get_waterfall_data():
-            try:
-                conn = self._get_db_connection()
-                c = conn.cursor()
-                
-                # Get unique workflows
-                c.execute("""
-                    SELECT DISTINCT name 
-                    FROM workflows 
-                    WHERE repo = ? 
-                    ORDER BY name
-                """, (self.repo_path,))
-                workflows = [row['name'] for row in c.fetchall()]
-                
-                # Get recent commits and their workflow runs
-                c.execute("""
-                    SELECT 
-                        c.hash,
-                        c.message,
-                        c.author,
-                        c.time as created_at,
-                        w.name as workflow_name,
-                        wr.status,
-                        wr.conclusion,
-                        wr.url,
-                        wr.runtime,
-                        wr.queuetime
-                    FROM commits c
-                    LEFT JOIN workflowruns wr ON c.id = wr.commitid
-                    LEFT JOIN workflows w ON wr.workflow = w.id
-                    WHERE c.repo = ? AND c.time > ?
-                    ORDER BY c.time DESC
-                """, (self.repo_path, time.time() - 86400))  # Last 24 hours
-                
-                rows = c.fetchall()
-                commits = {}
-                
-                for row in rows:
-                    sha = row['hash']
-                    if sha not in commits:
-                        commits[sha] = {
-                            'sha': sha,
-                            'title': row['message'],
-                            'author': row['author'],
-                            'time': datetime.datetime.fromtimestamp(row['created_at']).strftime('%I:%M %p'),
-                            'url': row['url'],
-                            'results': {}
-                        }
-                    if row['workflow_name']:
-                        commits[sha]['results'][row['workflow_name']] = {
-                            'status': row['status'],
-                            'conclusion': row['conclusion'],
-                            'runtime': row['runtime'],
-                            'queuetime': row['queuetime']
-                        }
-                
-                return jsonify({
-                    'workflows': workflows,
-                    'commits': list(commits.values())
-                })
-            
-            except Exception as e:
-                print(f"Error fetching waterfall data: {e}")
-                return jsonify({'error': str(e)}), 500
-            
-            finally:
-                conn.close()
+# Database connection configuration
+DB_CONFIG = {
+    'SERVER': os.getenv('AZURE_SQL_SERVER'),
+    'DATABASE': os.getenv('AZURE_SQL_DATABASE'),
+    'USERNAME': os.getenv('AZURE_SQL_USERNAME'),
+    'PASSWORD': os.getenv('AZURE_SQL_PASSWORD'),
+    'DRIVER': '{ODBC Driver 17 for SQL Server}'
+}
 
-        @self.app.route('/api/stats')
-        def get_stats():
-            try:
-                conn = self._get_db_connection()
-                c = conn.cursor()
-                
-                stats = {}
-                
-                # Get counts
-                for table in ['commits', 'workflows', 'workflowruns']:
-                    c.execute(f"SELECT COUNT(*) as count FROM {table} WHERE repo = ?", 
-                            (self.repo_path,))
-                    result = c.fetchone()
-                    stats[f'{table}_count'] = result['count']
-                
-                # Get success rate
-                c.execute("""
-                    SELECT 
-                        COUNT(*) as total,
-                        SUM(CASE WHEN conclusion = 'success' THEN 1 ELSE 0 END) as successes
-                    FROM workflowruns
-                    WHERE repo = ? AND conclusion IS NOT NULL
-                """, (self.repo_path,))
-                result = c.fetchone()
-                total = result['total']
-                successes = result['successes'] or 0
-                stats['success_rate'] = (successes / total * 100) if total > 0 else 0
+def get_db_connection():
+    conn_str = (
+        f"DRIVER={DB_CONFIG['DRIVER']};"
+        f"SERVER={DB_CONFIG['SERVER']};"
+        f"DATABASE={DB_CONFIG['DATABASE']};"
+        f"UID={DB_CONFIG['USERNAME']};"
+        f"PWD={DB_CONFIG['PASSWORD']}"
+    )
+    return pyodbc.connect(conn_str)
 
-                # Get average runtimes
-                c.execute("""
-                    SELECT 
-                        AVG(runtime) as avg_runtime,
-                        AVG(queuetime) as avg_queuetime
-                    FROM workflowruns
-                    WHERE repo = ? AND conclusion IS NOT NULL
-                """, (self.repo_path,))
-                result = c.fetchone()
-                stats['avg_runtime'] = result['avg_runtime'] or 0
-                stats['avg_queuetime'] = result['avg_queuetime'] or 0
-                
-                return jsonify(stats)
-            
-            except Exception as e:
-                print(f"Error fetching stats: {e}")
-                return jsonify({'error': str(e)}), 500
-            
-            finally:
-                conn.close()
+@app.route('/api/metrics/dashboard', methods=['GET'])
+def get_dashboard_metrics():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-        @self.app.route('/api/workflow-summary')
-        def get_workflow_summary():
-            try:
-                conn = self._get_db_connection()
-                c = conn.cursor()
-                
-                # Get summary per workflow
-                c.execute("""
-                    SELECT 
-                        w.name,
-                        COUNT(*) as total_runs,
-                        SUM(CASE WHEN wr.conclusion = 'success' THEN 1 ELSE 0 END) as successes,
-                        AVG(wr.runtime) as avg_runtime,
-                        AVG(wr.queuetime) as avg_queuetime
-                    FROM workflows w
-                    LEFT JOIN workflowruns wr ON w.id = wr.workflow
-                    WHERE w.repo = ?
-                    GROUP BY w.name
-                    ORDER BY w.name
-                """, (self.repo_path,))
-                
-                results = []
-                for row in c.fetchall():
-                    total = row['total_runs']
-                    successes = row['successes'] or 0
-                    results.append({
-                        'name': row['name'],
-                        'total_runs': total,
-                        'success_rate': (successes / total * 100) if total > 0 else 0,
-                        'avg_runtime': row['avg_runtime'] or 0,
-                        'avg_queuetime': row['avg_queuetime'] or 0
-                    })
-                
-                return jsonify(results)
-            
-            except Exception as e:
-                print(f"Error fetching workflow summary: {e}")
-                return jsonify({'error': str(e)}), 500
-            
-            finally:
-                conn.close()
+        # Get date range for last 7 days
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
 
-        @self.app.route('/api/metrics')
-        def get_metrics():
-            try:
-                conn = self._get_db_connection()
-                c = conn.cursor()
-                
-                # Calculate time ranges
-                now = time.time()
-                seven_days_ago = now - (7 * 24 * 60 * 60)
-                
-                # Get daily commits and their status
-                c.execute("""
-                    SELECT 
-                        date(datetime(c.time, 'unixepoch')) as commit_date,
-                        COUNT(*) as total_commits,
-                        SUM(CASE WHEN wr.conclusion = 'failure' THEN 1 ELSE 0 END) as failed_commits
-                    FROM commits c
-                    LEFT JOIN workflowruns wr ON c.id = wr.commitid
-                    WHERE c.time > ? AND c.repo = ?
-                    GROUP BY commit_date
-                    ORDER BY commit_date
-                """, (seven_days_ago, self.repo_path))
-                
-                daily_commits = [dict(row) for row in c.fetchall()]
-                
-                # Calculate red on main percentages
-                c.execute("""
-                    WITH workflow_stats AS (
-                        SELECT 
-                            c.id,
-                            CASE 
-                                WHEN wr.conclusion = 'failure' AND w.name LIKE '%strict%' THEN 'broken'
-                                WHEN wr.conclusion = 'failure' THEN 'flaky'
-                                ELSE 'success'
-                            END as status
-                        FROM commits c
-                        JOIN workflowruns wr ON c.id = wr.commitid
-                        JOIN workflows w ON wr.workflow = w.id
-                        WHERE c.time > ? AND c.repo = ?
-                    )
-                    SELECT 
-                        COUNT(*) as total,
-                        SUM(CASE WHEN status = 'broken' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as broken_percent,
-                        SUM(CASE WHEN status = 'flaky' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as flaky_percent
-                    FROM workflow_stats
-                """, (seven_days_ago, self.repo_path))
-                
-                trunk_stats = dict(c.fetchone())
-                
-                # Calculate time to red signal (TTRS)
-                c.execute("""
-                    WITH failure_times AS (
-                        SELECT 
-                            wr.createtime,
-                            wr.endtime,
-                            (wr.endtime - wr.createtime) / 60.0 as detection_time
-                        FROM workflowruns wr
-                        WHERE wr.conclusion = 'failure'
-                        AND wr.createtime > ?
-                        AND wr.repo = ?
-                    )
-                    SELECT
-                        AVG(detection_time) as avg_detection_time,
-                        MAX(detection_time) as max_detection_time
-                    FROM failure_times
-                """, (seven_days_ago, self.repo_path))
-                
-                ttrs = dict(c.fetchone())
-                
-                metrics = {
-                    'daily_commits': daily_commits,
-                    'trunk_stats': {
-                        'red_on_main_broken': round(trunk_stats['broken_percent'], 1) if trunk_stats['broken_percent'] else 0,
-                        'red_on_main_flaky': round(trunk_stats['flaky_percent'], 1) if trunk_stats['flaky_percent'] else 0,
-                    },
-                    'ttrs': {
-                        'avg': round(ttrs['avg_detection_time']) if ttrs['avg_detection_time'] else 0,
-                        'max': round(ttrs['max_detection_time']) if ttrs['max_detection_time'] else 0
-                    }
-                }
-                
-                return jsonify(metrics)
-                
-            except Exception as e:
-                print(f"Error fetching metrics: {e}")
-                return jsonify({'error': str(e)}), 500
-                
-            finally:
-                conn.close()
-
-        @self.app.route('/')
-        def serve():
-            return send_from_directory(self.app.static_folder, 'index.html')
-
-        @self.app.route('/<path:path>')
-        def static_proxy(path):
-            return send_from_directory(self.app.static_folder, path)
-
-    def start(self):
-        self.app.run(host='0.0.0.0', port=self.port, debug=True)
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-db', '--database', required=True, help="database file path")
-    parser.add_argument('-r', '--repo', required=True, help="repository (format: owner/repo)")
-    parser.add_argument('-p', '--port', type=int, default=5000, help="port to run on")
-    
-    args = parser.parse_args()
-    
-    if not os.path.exists(args.database):
-        print("Error: Database file not found.")
-        exit(1)
+        # Fetch daily commit data
+        cursor.execute("""
+            SELECT 
+                CONVERT(date, createtime) as date,
+                COUNT(*) as total,
+                SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN is_flaky = 1 THEN 1 ELSE 0 END) as flaky
+            FROM workflow_runs
+            WHERE createtime BETWEEN ? AND ?
+            GROUP BY CONVERT(date, createtime)
+            ORDER BY date
+        """, (start_date, end_date))
         
-    dashboard = Dashboard(args.database, args.repo, args.port)
-    dashboard.start()
+        chart_data = []
+        for row in cursor.fetchall():
+            chart_data.append({
+                'date': row.date.strftime('%Y-%m-%d'),
+                'total': row.total,
+                'failed': row.failed,
+                'flaky': row.flaky
+            })
+
+        # Fetch queue data
+        cursor.execute("""
+            SELECT 
+                machine_type,
+                COUNT(*) as count,
+                AVG(queue_time) as avg_queue_time
+            FROM queued_jobs
+            WHERE status = 'queued'
+            GROUP BY machine_type
+        """)
+        
+        queue_data = []
+        for row in cursor.fetchall():
+            queue_time_hours = row.avg_queue_time / 3600  # Convert seconds to hours
+            queue_data.append({
+                'machineType': row.machine_type,
+                'count': row.count,
+                'queueTime': f"{queue_time_hours:.1f}h"
+            })
+
+        # Fetch overall metrics
+        cursor.execute("""
+            SELECT
+                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflow_runs), 0) AS DECIMAL(5,1))
+                FROM workflow_runs WHERE conclusion = 'failure' AND is_flaky = 0) as red_on_main,
+                
+                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflow_runs), 0) AS DECIMAL(5,1))
+                FROM workflow_runs WHERE is_flaky = 1) as red_on_main_flaky,
+                
+                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM pull_requests), 0) AS DECIMAL(5,1))
+                FROM pull_requests WHERE force_merged = 1 AND failed_checks = 1) as force_merges_failed,
+                
+                (SELECT CAST(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM pull_requests), 0) AS DECIMAL(5,1))
+                FROM pull_requests WHERE force_merged = 1 AND impatient_merge = 1) as force_merges_impatience,
+                
+                (SELECT AVG(time_to_red_signal) FROM workflow_runs WHERE conclusion = 'failure') as avg_ttrs,
+                
+                (SELECT PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY time_to_red_signal) 
+                FROM workflow_runs WHERE conclusion = 'failure') as p75_ttrs,
+                
+                (SELECT time_diff FROM viable_strict_status WHERE id = (SELECT MAX(id) FROM viable_strict_status)) as viable_strict_lag,
+                
+                (SELECT last_push_time FROM main_branch_status) as last_main_push,
+                
+                (SELECT last_build_time FROM docker_builds WHERE status = 'success') as last_docker_build,
+                
+                (SELECT COUNT(*) FROM revert_commits WHERE createtime >= DATEADD(day, -7, GETDATE())) as reverts,
+                
+                (SELECT AVG(time_to_status) FROM pull_requests WHERE merged = 1) as pull_trunk_tts
+        """)
+        
+        metrics_row = cursor.fetchone()
+        metrics = {
+            'redOnMain': str(metrics_row.red_on_main),
+            'redOnMainFlaky': str(metrics_row.red_on_main_flaky),
+            'forceMergesFailed': str(metrics_row.force_merges_failed),
+            'forceMergesImpatience': str(metrics_row.force_merges_impatience),
+            'timeToRedSignal': str(round(metrics_row.avg_ttrs)),
+            'timeToRedSignalP75': str(round(metrics_row.p75_ttrs)),
+            'viableStrictLag': f"{metrics_row.viable_strict_lag / 3600:.1f}h",
+            'lastMainPush': f"{(datetime.now() - metrics_row.last_main_push).total_seconds() / 60:.1f}m",
+            'lastDockerBuild': f"{(datetime.now() - metrics_row.last_docker_build).total_seconds() / 3600:.1f}h",
+            'reverts': str(metrics_row.reverts),
+            'pullTrunkTTS': f"{metrics_row.pull_trunk_tts / 3600:.1f}h"
+        }
+
+        conn.close()
+        
+        return jsonify({
+            'chartData': chart_data,
+            'queueData': queue_data,
+            'metrics': metrics
+        })
+
+    except Exception as e:
+        app.logger.error(f"Database error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
