@@ -9,6 +9,13 @@ from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 CORS(app)
+connection_string = (
+    "Driver={ODBC Driver 17 for SQL Server};"
+    "Server=server_ip,1433;"
+    "Database=master;"
+    "UID=test_user;"
+    "PWD=test_password;"
+)
 
 # Enhanced logging setup
 logging.basicConfig(level=logging.DEBUG)
