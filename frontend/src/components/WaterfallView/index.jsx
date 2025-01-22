@@ -1,7 +1,5 @@
-// src/components/WaterfallView/index.jsx
 import React, { useState } from 'react';
 import StatusIcon from './StatusIcon';
-import dashboardData from '../../data/dashboard-data.json';
 
 const WaterfallView = () => {
   const [filter, setFilter] = useState('');
@@ -12,169 +10,190 @@ const WaterfallView = () => {
     monsterizeFailures: false
   });
 
+  // Mock data matching the screenshot format
   const commits = [
     {
-      time: '1/15/2025, 10:49:29 AM',
+      time: '1:31 pm',
       sha: '3032df2',
+      commit: '[BE] Simplify set add with set update',
+      pr: '#145152',
       author: 'ScottTodd',
       results: {
-        'CI': 'O',
-        'TEST': '?',
-        'LINT': '?',
-        'BUILD': '?',
-        'FULL': 'O'
+        'Linux': 'O',
+        'Win': '?',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': '?',
+        'Lint': '?',
+        'Test': '~'
       }
     },
     {
-      time: '1/15/2025, 8:44:00 AM',
-      sha: 'c285d58',
-      author: 'ScottTodd',
+      time: '12:53 pm',
+      sha: '9f15078',
+      commit: '[dynamo] Fix numpy test accuracy error index',
+      pr: '#145293',
+      author: 'StrongerXi',
       results: {
-        'CI': 'O'
+        'Linux': 'O',
+        'Win': '?',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': '~'
       }
     },
     {
-      time: '1/15/2025, 6:01:33 AM',
-      sha: '3c95042',
-      author: 'ScottTodd',
+      time: '12:46 pm',
+      sha: '2cfa98d',
+      commit: 'Binary upload checksum (#144887)',
+      pr: '#144887',
+      author: 'clee2000',
       results: {
-        'FULL': 'O'
+        'Linux': 'O',
+        'Win': '?',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': '~'
       }
     },
     {
-      time: '1/15/2025, 1:23:41 AM',
-      sha: '3c95042',
-      author: 'ScottTodd',
-      results: {}
-    },
-    {
-      time: '1/15/2025, 1:22:13 AM',
-      sha: '3c95042',
-      author: 'ScottTodd',
-      results: {}
-    },
-    {
-      time: '1/15/2025, 1:21:36 AM',
-      sha: '3c95042',
-      author: 'marbre',
-      results: {}
-    },
-    {
-      time: '1/15/2025, 12:22:46 AM',
-      sha: '3c95042',
-      author: 'saiendun',
+      time: '12:13 pm',
+      sha: 'a57133e',
+      commit: '[NVIDIA] Jetson Thor Blackwell Support',
+      pr: '#145395',
+      author: 'johnnynunez',
       results: {
-        'CI': 'O'
+        'Linux': 'O',
+        'Win': '?',
+        'Mac': '?',
+        'ROC': '?',
+        'Doc': '?',
+        'Lint': 'O',
+        'Test': '?'
       }
-    },
-    {
-      time: '1/14/2025, 10:01:44 PM',
-      sha: '27e7a90',
-      author: 'Elias42',
-      results: {}
     }
   ];
 
-  // Define workflow columns - match your needs
-  const workflows = ['CI', 'PR', 'MAC', 'ROC', 'BLD', 'LINT', 'TEST', 'DOC', 'CAF', 'MOB', 'ONN', 'IND', 'PTH'];
+  // Define workflow columns matching the screenshot
+  const workflows = ['Linux', 'Win', 'Mac', 'ROC', 'Doc', 'Lint', 'Test'];
 
   const filteredCommits = commits.filter(commit => {
     if (!filter) return true;
     return (
       commit.author?.toLowerCase().includes(filter.toLowerCase()) ||
-      commit.sha?.toLowerCase().includes(filter.toLowerCase())
+      commit.sha?.toLowerCase().includes(filter.toLowerCase()) ||
+      commit.commit?.toLowerCase().includes(filter.toLowerCase())
     );
   });
 
   return (
     <div className="p-4">
+      {/* Header */}
+      <h1 className="text-xl font-semibold mb-4">GitHub Workflow Dashboard</h1>
+      
+      {/* Navigation */}
+      <div className="flex justify-end mb-4 space-x-4">
+        <a href="#" className="text-blue-600 font-medium">Waterfall View</a>
+        <a href="#" className="text-gray-600">Metrics Dashboard</a>
+      </div>
+
       {/* Filter and Settings */}
-      <div className="mb-6 space-y-4">
-        <input
-          type="text"
-          placeholder="Filter commits..."
-          className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            type="text"
+            placeholder="Job filter..."
+            className="px-2 py-1 border rounded text-sm w-64"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+          <button className="px-3 py-1 border rounded text-sm bg-gray-50">Go</button>
+        </div>
         
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2">
+        <div className="flex gap-4 text-sm">
+          <label className="flex items-center gap-1">
             <input
               type="checkbox"
               checked={settings.groupedView}
               onChange={(e) => setSettings(prev => ({...prev, groupedView: e.target.checked}))}
-              className="rounded border-gray-300"
             />
-            <span className="text-sm">Grouped View</span>
+            Use grouped view
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-1">
             <input
               type="checkbox"
               checked={settings.hideUnstable}
               onChange={(e) => setSettings(prev => ({...prev, hideUnstable: e.target.checked}))}
-              className="rounded border-gray-300"
             />
-            <span className="text-sm">Hide Unstable</span>
+            Hide unstable jobs
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-1">
             <input
               type="checkbox"
               checked={settings.condenseLF}
               onChange={(e) => setSettings(prev => ({...prev, condenseLF: e.target.checked}))}
-              className="rounded border-gray-300"
             />
-            <span className="text-sm">Condense LF</span>
+            Condense LF jobs
           </label>
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-1">
             <input
               type="checkbox"
               checked={settings.monsterizeFailures}
               onChange={(e) => setSettings(prev => ({...prev, monsterizeFailures: e.target.checked}))}
-              className="rounded border-gray-300"
             />
-            <span className="text-sm">Monsterize Failures</span>
+            Monsterize failures
           </label>
         </div>
       </div>
 
       {/* Waterfall Table */}
-      <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-        <table className="min-w-full divide-y divide-gray-300">
+      <div className="overflow-x-auto border rounded">
+        <table className="min-w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">SHA</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
+              <th className="px-2 py-1 text-left font-medium">Time</th>
+              <th className="px-2 py-1 text-left font-medium">SHA</th>
+              <th className="px-2 py-1 text-left font-medium">Commit</th>
+              <th className="px-2 py-1 text-left font-medium">PR</th>
+              <th className="px-2 py-1 text-left font-medium">Author</th>
               {workflows.map(workflow => (
-                <th key={workflow} className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th key={workflow} className="px-1 py-1 text-center font-medium">
                   {workflow}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white">
             {filteredCommits.map((commit, idx) => (
-              <tr key={`${commit.sha}-${commit.time}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">
+              <tr key={`${commit.sha}-${commit.time}`} className="border-t border-gray-100">
+                <td className="px-2 py-1 text-gray-500 whitespace-nowrap">
                   {commit.time}
                 </td>
-                <td className="px-3 py-2 text-sm whitespace-nowrap">
-                  <a 
-                    href={`#${commit.sha}`}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
+                <td className="px-2 py-1 font-mono whitespace-nowrap">
+                  <a href={`#${commit.sha}`} className="text-blue-600 hover:underline">
                     {commit.sha}
                   </a>
                 </td>
-                <td className="px-3 py-2 text-sm text-gray-500">
+                <td className="px-2 py-1">
+                  <a href={`#${commit.sha}`} className="text-blue-600 hover:underline">
+                    {commit.commit}
+                  </a>
+                </td>
+                <td className="px-2 py-1">
+                  <a href={`#${commit.pr}`} className="text-blue-600 hover:underline">
+                    {commit.pr}
+                  </a>
+                </td>
+                <td className="px-2 py-1 text-gray-500">
                   {commit.author}
                 </td>
                 {workflows.map(workflow => (
-                  <td key={workflow} className="px-2 py-2">
-                    <div className="flex justify-center">
-                      <StatusIcon status={commit.results[workflow] || '~'} />
-                    </div>
+                  <td key={workflow} className="px-1 py-1 text-center">
+                    <StatusIcon status={commit.results[workflow] || '~'} />
                   </td>
                 ))}
               </tr>

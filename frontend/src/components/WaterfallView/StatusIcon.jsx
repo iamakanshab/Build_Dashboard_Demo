@@ -1,49 +1,54 @@
-// src/components/WaterfallView/StatusIcon.jsx
 import React from 'react';
 
 const StatusIcon = ({ status }) => {
-  const getStatusColor = () => {
+  // Map status to display character and color
+  const getStatusStyle = () => {
     switch (status) {
       case 'O':
-        return 'bg-green-500'; // Success - Green circle
+        return 'text-green-600'; // Success green
       case 'X':
-        return 'bg-red-500';   // Failure - Red X
+        return 'text-red-600';   // Failure red
       case '?':
-        return 'bg-yellow-500'; // Unknown/Pending - Yellow question mark
+        return 'text-yellow-500'; // Question mark yellow
+      case 'F':
+        return 'text-orange-500'; // Flaky orange
       case '~':
-        return 'bg-gray-300';   // Skipped/Not applicable - Gray dash
+        return 'text-gray-400';   // Skip/not applicable gray
       default:
-        return 'bg-gray-200';
+        return 'text-gray-300';
     }
   };
 
-  const getContent = () => {
+  // Map status to display character
+  const getSymbol = () => {
     switch (status) {
       case 'O':
-        return 'O';
+        return '●'; // Filled circle for success
       case 'X':
-        return 'X';
+        return '✕'; // X for failure
       case '?':
-        return '?';
+        return '?'; // Question mark for unknown
+      case 'F':
+        return 'F'; // F for flaky
       case '~':
-        return '~';
+        return '–'; // En dash for skipped
       default:
-        return '';
+        return '–';
     }
   };
 
   return (
-    <div className={`
-      w-6 h-6 
-      flex items-center justify-center 
-      ${getStatusColor()} 
-      text-white text-sm font-bold 
-      rounded-full
+    <span className={`
+      ${getStatusStyle()}
+      inline-block
+      font-bold
+      leading-none
+      min-w-[1.25rem]
+      text-center
     `}>
-      {getContent()}
-    </div>
+      {getSymbol()}
+    </span>
   );
 };
 
 export default StatusIcon;
-
