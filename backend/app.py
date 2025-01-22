@@ -47,7 +47,8 @@ def require_db_connection(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            db_password = os.getenv('DB_PASSWORD')
+            #db_password = os.getenv('DB_PASSWORD')
+            db_password = 'BackendPassw0rd'
             if not db_password:
                 app.logger.error("Database password not configured")
                 return jsonify({'error': 'Database password not configured'}), 500
