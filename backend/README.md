@@ -122,3 +122,25 @@ python listener.py -r "iree-org/iree" -k "ghp_putyourkeyhere" -p 5000 -pwd passw
 If the Listener ever goes down, you can just reuse the same command you used to start it to restart it.
 
 If it has been down for a while, you can use the `populate_db.py` script without the `-i` flag and a low `-m` flag
+
+The listeners can run concurrently.  Webhooks are set up on the following ports
+
+iree-org/iree: 5000  
+iree-org/iree-turbine: 5001  
+iree-org/iree-test-suites: 5002  
+nod-ai/shark-ai: 5003  
+nod-ai/SHARK-TestSuite: 5004  
+
+these can be brought back online with
+
+```
+python listener.py -r "iree-org/iree" -k "your-personal-access-token-here" -p 5000 -pwd "your-password-here"
+
+python listener.py -r "iree-org/iree-turbine" -k "your-personal-access-token-here" -p 5001 -pwd "your-password-here"
+
+python listener.py -r "iree-org/iree-test-suite" -k "your-personal-access-token-here" -p 5002 -pwd "your-password-here"
+
+python listener.py -r "nod-ai/shark-ai" -k "your-personal-access-token-here" -p 5003 -pwd "your-password-here"
+
+python listener.py -r "nod-ai/SHARK-TestSuite" -k "your-personal-access-token-here" -p 5004 -pwd "your-password-here"
+```
