@@ -225,27 +225,73 @@ def get_dashboard_metrics(conn):
         app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+# @app.route('/api/metrics/workflow-runs', methods=['GET'])
+# @require_db_connection
+# def get_workflowruns(conn):
+#     try:
+#         days = request.args.get('days', default=7, type=int)
+#         cursor = conn.cursor()
+        
+#         end_date = datetime.now()
+#         start_date = end_date - timedelta(days=days)
+#         app.logger.debug(f"Fetching workflow runs from {start_date} to {end_date}")
+        
+#         cursor.execute("""
+#             SELECT 
+#                 workflow_id,
+#                 createtime,
+#                 conclusion,
+#                 time_to_red_signal
+#             FROM workflowruns
+#             WHERE createtime BETWEEN ? AND ?
+#             ORDER BY createtime DESC
+#         """, (start_date, end_date))
+        
+#         runs = []
+#         for row in cursor.fetchall():
+#             runs.append({
+#                 'workflowId': row.workflow_id,
+#                 'createTime': row.createtime.isoformat(),
+#                 'conclusion': row.conclusion,
+#                 'timeToRedSignal': row.time_to_red_signal
+#             })
+        
+#         app.logger.debug(f"Retrieved {len(runs)} workflow runs")
+#         return jsonify(runs)
+
+#     except Exception as e:
+#         app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
+#         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 @app.route('/api/metrics/workflow-runs', methods=['GET'])
 @require_db_connection
 def get_workflowruns(conn):
     try:
         days = request.args.get('days', default=7, type=int)
-        cursor = conn.cursor()
+        repo = request.args.get('repo', default=None)
         
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
-        app.logger.debug(f"Fetching workflow runs from {start_date} to {end_date}")
-        
-        cursor.execute("""
+        query = """
             SELECT 
                 workflow_id,
                 createtime,
                 conclusion,
-                time_to_red_signal
+                time_to_red_signal,
+                repo,
+                commit_message,
+                author,
+                pr_number
             FROM workflowruns
-            WHERE createtime BETWEEN ? AND ?
-            ORDER BY createtime DESC
-        """, (start_date, end_date))
+            WHERE createtime >= DATEADD(day, -?, GETDATE())
+        """
+        params = [days]
+        
+        if repo and repo != 'all':
+            query += " AND repo = ?"
+            params.append(repo)
+            
+        query += " ORDER BY createtime DESC"
+        
+        cursor = conn.cursor()
+        cursor.execute(query, params)
         
         runs = []
         for row in cursor.fetchall():
@@ -253,15 +299,17 @@ def get_workflowruns(conn):
                 'workflowId': row.workflow_id,
                 'createTime': row.createtime.isoformat(),
                 'conclusion': row.conclusion,
-                'timeToRedSignal': row.time_to_red_signal
+                'timeToRedSignal': row.time_to_red_signal,
+                'repo': row.repo,
+                'commitMessage': row.commit_message,
+                'author': row.author,
+                'prNumber': row.pr_number
             })
         
-        app.logger.debug(f"Retrieved {len(runs)} workflow runs")
         return jsonify(runs)
-
     except Exception as e:
-        app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+        app.logger.error(f"Error fetching workflow runs: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/metrics/queue-status', methods=['GET'])
 @require_db_connection
