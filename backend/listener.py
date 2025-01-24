@@ -33,13 +33,22 @@ class Dashboard:
         data = request.get_json()
         # handle new branch creation
         if data.get("ref_type") == "branch":
-            self.add_branch(data)
+            try:
+                self.add_branch(data)
+            except Exeption as e:
+                print(e)
         # handle new commit
         if "commits" in data:
-            self.add_commit(data)
+            try:
+                self.add_commit(data)
+            except Exeption as e:
+                print(e)
         # handle new workflow run
         if "workflow_run" in data:
-            self.add_workflow_run(data)
+            try:
+                self.add_workflow_run(data)
+            except Exeption as e:
+                print(e)
         return "", 200
 
     def add_commit(self, data):
