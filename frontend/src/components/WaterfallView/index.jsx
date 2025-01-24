@@ -1,542 +1,402 @@
-import React, { useState } from 'react';
-import StatusIcon from './StatusIcon';
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// StatusIcon component stays the same...
+const StatusIcon = ({ status }) => {
+  const getStatusStyle = () => {
+    switch (status) {
+      case 'O': return 'text-green-600';
+      case 'X': return 'text-red-600';
+      case '?': return 'text-yellow-500';
+      case 'F': return 'text-orange-500';
+      case '~': return 'text-gray-400';
+      default: return 'text-gray-300';
+    }
+  };
+
+  const getSymbol = () => {
+    switch (status) {
+      case 'O': return '●';
+      case 'X': return '✕';
+      case '?': return '?';
+      case 'F': return 'F';
+      case '~': return '–';
+      default: return '–';
+    }
+  };
+
+  return (
+    <span className={`${getStatusStyle()} inline-block font-bold leading-none min-w-[1.25rem] text-center`}>
+      {getSymbol()}
+    </span>
+  );
+};
 
 const WaterfallView = () => {
+  // State definitions stay the same...
+  const [workflowRuns, setWorkflowRuns] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [selectedRepo, setSelectedRepo] = useState('all');
   const [settings, setSettings] = useState({
     groupedView: true,
     hideUnstable: false,
     condenseLF: true,
-    monsterizeFailures: false
+
   });
 
-  // Mock data matching the screenshot format
-  const commits = [
-    {
-      time: '3:45 pm',
-      sha: 'f2e1d9a',
-      commit: '[Functorch] Fix vmap broadcasting for scalar tensors',
-      pr: '#145160',
-      author: 'zou3519',
-      results: {
-        'Linux': 'O',
-        'Win': '?',
-        'Mac': '?',
-        'ROC': '~',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': '?'
-      }
-    },
-    {
-      time: '3:32 pm',
-      sha: 'c4d2e8b',
-      commit: '[dynamo] Improve error messages for graph breaks',
-      pr: '#145159',
-      author: 'jansel',
-      results: {
-        'Linux': 'X',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'X'
-      }
-    },
-    {
-      time: '3:15 pm',
-      sha: 'b9a7f12',
-      commit: '[CI] Update CUDA 12.1 build environment',
-      pr: '#145158',
-      author: 'seemethere',
-      results: {
-        'Linux': 'O',
-        'Win': 'O',
-        'Mac': '~',
-        'ROC': '~',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '3:01 pm',
-      sha: 'e7c6d4f',
-      commit: '[MPS] Fix memory leak in pooling operations',
-      pr: '#145157',
-      author: 'malfet',
-      results: {
-        'Linux': '~',
-        'Win': '~',
-        'Mac': 'X',
-        'ROC': '~',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'X'
-      }
-    },
-    {
-      time: '2:55 pm',
-      sha: 'a1b2c3d',
-      commit: '[Doc] Update distributed training tutorial',
-      pr: '#145156',
-      author: 'mrshenli',
-      results: {
-        'Linux': 'O',
-        'Win': 'O',
-        'Mac': 'O',
-        'ROC': '~',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '2:43 pm',
-      sha: 'd4e5f6a',
-      commit: '[Autograd] Fix gradient computation for complex tensors',
-      pr: '#145155',
-      author: 'kshitij12345',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'F'
-      }
-    },
-    {
-      time: '2:31 pm',
-      sha: '1a2b3c4',
-      commit: '[ROCm] Update HIP compiler version',
-      pr: '#145154',
-      author: 'jeffdaily',
-      results: {
-        'Linux': 'O',
-        'Win': '~',
-        'Mac': '~',
-        'ROC': 'X',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'X'
-      }
-    },
-    {
-      time: '2:22 pm',
-      sha: '7g8h9i0',
-      commit: '[Test] Add benchmarks for transformer inference',
-      pr: '#145153',
-      author: 'chunyuan-w',
-      results: {
-        'Linux': 'O',
-        'Win': 'O',
-        'Mac': 'O',
-        'ROC': 'O',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '2:31 pm',
-      sha: 'b812095',
-      commit: 'Fix tests broken by #145176 (#145393)',
-      pr: '#145393',
-      author: 'aorenste',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': '?'
-      }
-    },
-    {
-      time: '2:15 pm',
-      sha: '70ccbad',
-      commit: '[MPSInductor] Add `gamma` op (#145341)',
-      pr: '#145341',
-      author: 'malfet',
-      results: {
-        'Linux': 'X',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': 'X'
-      }
-    },
-    {
-      time: '2:01 pm',
-      sha: '3917053',
-      commit: '[audio hash update] update the pinned audio hash',
-      pr: '#145328',
-      author: 'pytorchupdates',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': 'X',
-        'Lint': '?',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '1:45 pm',
-      sha: '95ff9f0',
-      commit: '[Doc] Add period at the end of the sentence',
-      pr: '#145384',
-      author: 'malfet',
-      results: {
-        'Linux': 'X',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': 'X',
-        'Lint': 'X',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '1:31 pm',
-      sha: '3032df2',
-      commit: '[BE] Simplify set add with set update',
-      pr: '#145152',
-      author: 'ScottTodd',
-      results: {
-        'Linux': 'O',
-        'Win': '?',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': '?',
-        'Lint': '?',
-        'Test': '~'
-      }
-    },
-    {
-      time: '12:53 pm',
-      sha: '9f15078',
-      commit: '[dynamo] Fix numpy test accuracy error index',
-      pr: '#145293',
-      author: 'StrongerXi',
-      results: {
-        'Linux': 'O',
-        'Win': '?',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': '~'
-      }
-    },
-    {
-      time: '12:46 pm',
-      sha: '2cfa98d',
-      commit: 'Binary upload checksum (#144887)',
-      pr: '#144887',
-      author: 'clee2000',
-      results: {
-        'Linux': 'O',
-        'Win': '?',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': '~'
-      }
-    },
-    {
-      time: '12:13 pm',
-      sha: 'a57133e',
-      commit: '[NVIDIA] Jetson Thor Blackwell Support',
-      pr: '#145395',
-      author: 'johnnynunez',
-      results: {
-        'Linux': 'O',
-        'Win': '?',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': '?'
-      }
-    },
-    {
-      time: '12:11 pm',
-      sha: '0940eb6',
-      commit: 'Reverting the PR adding Kleidiai-based int4 support',
-      pr: '#145392',
-      author: 'albanD',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': '?'
-      }
-    },
-    {
-      time: '11:56 am',
-      sha: 'e8e3c03',
-      commit: '[Test][Inductor] Fix test_tma_graph_breaks',
-      pr: '#145271',
-      author: 'Aidyn-A',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': 'X',
-        'Lint': 'O',
-        'Test': 'F'
-      }
-    },
-    {
-      time: '11:33 am',
-      sha: 'ac8ddf1',
-      commit: '[export][be] Clean up local imports from export',
-      pr: '#145287',
-      author: 'zhxchen17',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': 'O',
-        'ROC': 'X',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '11:09 am',
-      sha: '30717d2',
-      commit: 'Move Dynamo test to skip from expected_failures',
-      pr: '#145390',
-      author: 'zou3519',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': '?',
-        'Lint': 'O',
-        'Test': '?'
-      }
-    },
-    {
-      time: '11:06 am',
-      sha: '0bff377',
-      commit: 'Align CPU behavior with CUDA for `ConvTranpose`',
-      pr: '#142859',
-      author: 'chunyuan-w',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': 'O',
-        'ROC': 'O',
-        'Doc': 'X',
-        'Lint': 'X',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '10:55 am',
-      sha: 'j4k5l6m',
-      commit: '[AMP] Fix scaling for mixed precision training',
-      pr: '#145151',
-      author: 'masahi',
-      results: {
-        'Linux': 'O',
-        'Win': 'O',
-        'Mac': 'O',
-        'ROC': 'O',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '10:41 am',
-      sha: 'n7m8p9q',
-      commit: '[Inductor] Support more fusion patterns',
-      pr: '#145150',
-      author: 'jansel',
-      results: {
-        'Linux': 'X',
-        'Win': 'X',
-        'Mac': 'X',
-        'ROC': 'X',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'X'
-      }
-    },
-    {
-      time: '10:32 am',
-      sha: 'r1s2t3u',
-      commit: '[Doc] Fix broken links in C++ API docs',
-      pr: '#145149',
-      author: 'malfet',
-      results: {
-        'Linux': 'O',
-        'Win': 'O',
-        'Mac': 'O',
-        'ROC': '~',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': '~'
-      }
-    },
-    {
-      time: '10:15 am',
-      sha: 'v4w5x6y',
-      commit: '[BC Breaking] Update deprecated torch.fft APIs',
-      pr: '#145148',
-      author: 'peterbell10',
-      results: {
-        'Linux': 'O',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': 'O',
-        'Lint': 'X',
-        'Test': 'F'
-      }
-    },
-    {
-      time: '10:03 am',
-      sha: 'z9a8b7c',
-      commit: '[Quantization] Add support for per-channel quantization',
-      pr: '#145147',
-      author: 'jerryzh168',
-      results: {
-        'Linux': 'O',
-        'Win': '?',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': '?'
-      }
-    },
-    {
-      time: '9:55 am',
-      sha: 'd6e5f4g',
-      commit: '[CUDA] Optimize memory allocator for large tensors',
-      pr: '#145146',
-      author: 'soumith',
-      results: {
-        'Linux': 'O',
-        'Win': 'O',
-        'Mac': '~',
-        'ROC': 'O',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '9:41 am',
-      sha: 'h3i2j1k',
-      commit: '[NN] Add Mamba layer implementation',
-      pr: '#145145',
-      author: 'albanD',
-      results: {
-        'Linux': 'X',
-        'Win': 'X',
-        'Mac': '?',
-        'ROC': 'X',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'X'
-      }
-    },
-    {
-      time: '9:32 am',
-      sha: 'l4m5n6o',
-      commit: '[Build] Fix Windows MSVC compilation errors',
-      pr: '#145144',
-      author: 'ezyang',
-      results: {
-        'Linux': '~',
-        'Win': 'O',
-        'Mac': '~',
-        'ROC': '~',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'O'
-      }
-    },
-    {
-      time: '9:15 am',
-      sha: 'p7q8r9s',
-      commit: '[Distributed] Improve error handling in NCCL backend',
-      pr: '#145143',
-      author: 'mrshenli',
-      results: {
-        'Linux': 'O',
-        'Win': 'O',
-        'Mac': 'O',
-        'ROC': 'O',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': 'F'
-      }
-    },
-    {
-      time: '9:01 am',
-      sha: 't0u1v2w',
-      commit: '[Test] Add more coverage for autograd edge cases',
-      pr: '#145142',
-      author: 'kshitij12345',
-      results: {
-        'Linux': 'O',
-        'Win': '?',
-        'Mac': '?',
-        'ROC': '?',
-        'Doc': 'O',
-        'Lint': 'O',
-        'Test': '?'
-      }
-    }
-    
+  const repos = [
+    { id: 'pytorch/pytorch', name: 'PyTorch' },
+    { id: 'pytorch/vision', name: 'TorchVision' },
+    { id: 'pytorch/audio', name: 'TorchAudio' },
+    { id: 'pytorch/text', name: 'TorchText' }
   ];
 
-  // Define workflow columns matching the screenshot
+  // Mock data for development
+  const mockData = [
+    {
+      workflowId: "1234567890abcdef",
+      createTime: "2024-01-24T15:45:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/pytorch",
+      commitMessage: "[Functorch] Fix vmap broadcasting for scalar tensors",
+      author: "zou3519",
+      prNumber: "145160"
+    },
+    {
+      workflowId: "2345678901abcdef",
+      createTime: "2024-01-24T15:32:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 15,
+      repo: "pytorch/pytorch",
+      commitMessage: "[dynamo] Improve error messages for graph breaks",
+      author: "jansel",
+      prNumber: "145159"
+    },
+    {
+      workflowId: "3456789012abcdef",
+      createTime: "2024-01-24T15:15:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/pytorch",
+      commitMessage: "[CI] Update CUDA 12.1 build environment",
+      author: "seemethere",
+      prNumber: "145158"
+    },
+    {
+      workflowId: "4567890123abcdef",
+      createTime: "2024-01-24T15:01:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 20,
+      repo: "pytorch/vision",
+      commitMessage: "[MPS] Fix memory leak in pooling operations",
+      author: "malfet",
+      prNumber: "145157"
+    },
+    {
+      workflowId: "5678901234abcdef",
+      createTime: "2024-01-24T14:55:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/audio",
+      commitMessage: "[Doc] Update distributed training tutorial",
+      author: "mrshenli",
+      prNumber: "145156"
+    },
+    {
+      workflowId: "6789012345abcdef",
+      createTime: "2024-01-24T14:43:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 10,
+      repo: "pytorch/text",
+      commitMessage: "[Autograd] Fix gradient computation for complex tensors",
+      author: "kshitij12345",
+      prNumber: "145155"
+    },
+    {
+      workflowId: "7890123456abcdef",
+      createTime: "2024-01-24T14:31:00Z",
+      conclusion: "failure",
+      timeToRedSignal: null,
+      repo: "pytorch/pytorch",
+      commitMessage: "[ROCm] Update HIP compiler version",
+      author: "jeffdaily",
+      prNumber: "145154"
+    },
+    {
+      workflowId: "8901234567abcdef",
+      createTime: "2024-01-24T14:22:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/vision",
+      commitMessage: "[Test] Add benchmarks for transformer inference",
+      author: "chunyuan-w",
+      prNumber: "145153"
+    },
+    {
+      workflowId: "9012345678abcdef",
+      createTime: "2024-01-24T14:15:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 25,
+      repo: "pytorch/pytorch",
+      commitMessage: "Fix tests broken by #145176",
+      author: "aorenste",
+      prNumber: "145393"
+    },
+    {
+      workflowId: "0123456789abcdef",
+      createTime: "2024-01-24T14:01:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 30,
+      repo: "pytorch/audio",
+      commitMessage: "[MPSInductor] Add `gamma` op",
+      author: "malfet",
+      prNumber: "145341"
+    },
+    {
+      workflowId: "abcdef1234567890",
+      createTime: "2024-01-24T13:45:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/text",
+      commitMessage: "[audio hash update] Update the pinned audio hash",
+      author: "pytorchupdates",
+      prNumber: "145328"
+    },
+    {
+      workflowId: "bcdef1234567890a",
+      createTime: "2024-01-24T13:31:00Z",
+      conclusion: "failure",
+      timeToRedSignal: null,
+      repo: "pytorch/pytorch",
+      commitMessage: "[Doc] Add period at the end of the sentence",
+      author: "malfet",
+      prNumber: "145384"
+    },
+    {
+      workflowId: "cdef1234567890ab",
+      createTime: "2024-01-24T13:15:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/vision",
+      commitMessage: "[BE] Simplify set add with set update",
+      author: "ScottTodd",
+      prNumber: "145152"
+    },
+    {
+      workflowId: "def1234567890abc",
+      createTime: "2024-01-24T13:01:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 18,
+      repo: "pytorch/pytorch",
+      commitMessage: "[dynamo] Fix numpy test accuracy error index",
+      author: "StrongerXi",
+      prNumber: "145293"
+    },
+    {
+      workflowId: "ef1234567890abcd",
+      createTime: "2024-01-24T12:45:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/audio",
+      commitMessage: "Binary upload checksum",
+      author: "clee2000",
+      prNumber: "144887"
+    },
+    {
+      workflowId: "f1234567890abcde",
+      createTime: "2024-01-24T12:31:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 22,
+      repo: "pytorch/text",
+      commitMessage: "[NVIDIA] Jetson Thor Blackwell Support",
+      author: "johnnynunez",
+      prNumber: "145395"
+    },
+    {
+      workflowId: "1234567890abcdef1",
+      createTime: "2024-01-24T12:15:00Z",
+      conclusion: "failure",
+      timeToRedSignal: null,
+      repo: "pytorch/pytorch",
+      commitMessage: "Reverting the PR adding Kleidiai-based int4 support",
+      author: "albanD",
+      prNumber: "145392"
+    },
+    {
+      workflowId: "2345678901abcdef2",
+      createTime: "2024-01-24T12:01:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/vision",
+      commitMessage: "[Test][Inductor] Fix test_tma_graph_breaks",
+      author: "Aidyn-A",
+      prNumber: "145271"
+    },
+    {
+      workflowId: "3456789012abcdef3",
+      createTime: "2024-01-24T11:45:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 12,
+      repo: "pytorch/pytorch",
+      commitMessage: "[export][be] Clean up local imports from export",
+      author: "zhxchen17",
+      prNumber: "145287"
+    },
+    {
+      workflowId: "4567890123abcdef4",
+      createTime: "2024-01-24T11:31:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/audio",
+      commitMessage: "Move Dynamo test to skip from expected_failures",
+      author: "zou3519",
+      prNumber: "145390"
+    },
+    {
+      workflowId: "5678901234abcdef5",
+      createTime: "2024-01-24T11:15:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 28,
+      repo: "pytorch/text",
+      commitMessage: "Align CPU behavior with CUDA for `ConvTranpose`",
+      author: "chunyuan-w",
+      prNumber: "142859"
+    },
+    {
+      workflowId: "6789012345abcdef6",
+      createTime: "2024-01-24T11:01:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/pytorch",
+      commitMessage: "[AMP] Fix scaling for mixed precision training",
+      author: "masahi",
+      prNumber: "145151"
+    },
+    {
+      workflowId: "7890123456abcdef7",
+      createTime: "2024-01-24T10:45:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 15,
+      repo: "pytorch/vision",
+      commitMessage: "[Inductor] Support more fusion patterns",
+      author: "jansel",
+      prNumber: "145150"
+    },
+    {
+      workflowId: "8901234567abcdef8",
+      createTime: "2024-01-24T10:31:00Z",
+      conclusion: "success",
+      timeToRedSignal: null,
+      repo: "pytorch/pytorch",
+      commitMessage: "[Doc] Fix broken links in C++ API docs",
+      author: "malfet",
+      prNumber: "145149"
+    },
+    {
+      workflowId: "9012345678abcdef9",
+      createTime: "2024-01-24T10:15:00Z",
+      conclusion: "failure",
+      timeToRedSignal: 20,
+      repo: "pytorch/audio",
+      commitMessage: "[BC Breaking] Update deprecated torch.fft APIs",
+      author: "peterbell10",
+      prNumber: "145148"
+    }
+  ];
+
+  // useEffect stays the same...
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const queryParams = new URLSearchParams({
+          days: '7',
+          repo: selectedRepo === 'all' ? '' : selectedRepo
+        });
+        
+        // For development, use mock data
+        // const response = await fetch(`${API_BASE_URL}/metrics/workflow-runs?${queryParams}`);
+        // if (!response.ok) throw new Error('Failed to fetch workflow data');
+        // const data = await response.json();
+        const data = mockData;
+        
+        const transformedData = data.map(run => ({
+          time: new Date(run.createTime).toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          }),
+          sha: run.workflowId.substring(0, 7),
+          commit: run.commitMessage,
+          conclusion: run.conclusion,
+          repo: run.repo || 'pytorch/pytorch',
+          pr: `#${run.prNumber}`,
+          author: run.author,
+          deepLink: `https://github.com/${run.repo}/commit/${run.workflowId}`,
+          results: {
+            'Linux': run.conclusion === 'success' ? 'O' : run.conclusion === 'failure' ? 'X' : '?',
+            'Win': run.conclusion === 'success' ? 'O' : run.conclusion === 'failure' ? 'X' : '?',
+            'Mac': run.conclusion === 'success' ? 'O' : run.conclusion === 'failure' ? 'X' : '?',
+            'ROC': run.conclusion === 'success' ? 'O' : run.conclusion === 'failure' ? 'X' : '~',
+            'Doc': run.conclusion === 'success' ? 'O' : run.conclusion === 'failure' ? 'X' : '?',
+            'Lint': run.conclusion === 'success' ? 'O' : '?',
+            'Test': run.timeToRedSignal ? 'F' : run.conclusion === 'success' ? 'O' : 'X'
+          }
+        }));
+        
+        setWorkflowRuns(transformedData);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 300000);
+    return () => clearInterval(interval);
+  }, [selectedRepo]);
+
   const workflows = ['Linux', 'Win', 'Mac', 'ROC', 'Doc', 'Lint', 'Test'];
 
-  const filteredCommits = commits.filter(commit => {
+  const filteredRuns = workflowRuns.filter(run => {
     if (!filter) return true;
     return (
-      commit.author?.toLowerCase().includes(filter.toLowerCase()) ||
-      commit.sha?.toLowerCase().includes(filter.toLowerCase()) ||
-      commit.commit?.toLowerCase().includes(filter.toLowerCase())
+      run.sha.toLowerCase().includes(filter.toLowerCase()) ||
+      run.commit.toLowerCase().includes(filter.toLowerCase()) ||
+      run.author.toLowerCase().includes(filter.toLowerCase())
     );
   });
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
-      {/* Header */}
       <h1 className="text-xl font-semibold mb-4">GitHub Workflow Dashboard</h1>
       
-      {/* Navigation */}
-      <div className="flex justify-end mb-4 space-x-4">
-        <a href="#" className="text-blue-600 font-medium">Waterfall View</a>
-        <a href="#" className="text-gray-600">Metrics Dashboard</a>
-      </div>
-
-      {/* Filter and Settings */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex gap-4">
+          <select
+            value={selectedRepo}
+            onChange={(e) => setSelectedRepo(e.target.value)}
+            className="w-48 px-2 py-1 border rounded text-sm"
+          >
+            <option value="all">All Repositories</option>
+            {repos.map(repo => (
+              <option key={repo.id} value={repo.id}>
+                {repo.name}
+              </option>
+            ))}
+          </select>
           <input
             type="text"
             placeholder="Job filter..."
@@ -546,44 +406,36 @@ const WaterfallView = () => {
           />
           <button className="px-3 py-1 border rounded text-sm bg-gray-50">Go</button>
         </div>
-        
-        <div className="flex gap-4 text-sm">
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={settings.groupedView}
-              onChange={(e) => setSettings(prev => ({...prev, groupedView: e.target.checked}))}
-            />
-            Use grouped view
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={settings.hideUnstable}
-              onChange={(e) => setSettings(prev => ({...prev, hideUnstable: e.target.checked}))}
-            />
-            Hide unstable jobs
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={settings.condenseLF}
-              onChange={(e) => setSettings(prev => ({...prev, condenseLF: e.target.checked}))}
-            />
-            Condense LF jobs
-          </label>
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={settings.monsterizeFailures}
-              onChange={(e) => setSettings(prev => ({...prev, monsterizeFailures: e.target.checked}))}
-            />
-            Monsterize failures
-          </label>
-        </div>
       </div>
 
-      {/* Waterfall Table */}
+      <div className="flex gap-4 text-sm mb-4">
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={settings.groupedView}
+            onChange={(e) => setSettings(prev => ({...prev, groupedView: e.target.checked}))}
+          />
+          Use grouped view
+        </label>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={settings.hideUnstable}
+            onChange={(e) => setSettings(prev => ({...prev, hideUnstable: e.target.checked}))}
+          />
+          Hide unstable jobs
+        </label>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={settings.condenseLF}
+            onChange={(e) => setSettings(prev => ({...prev, condenseLF: e.target.checked}))}
+          />
+          Condense LF jobs
+        </label>
+
+      </div>
+
       <div className="overflow-x-auto border rounded">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50">
@@ -601,32 +453,40 @@ const WaterfallView = () => {
             </tr>
           </thead>
           <tbody className="bg-white">
-            {filteredCommits.map((commit, idx) => (
-              <tr key={`${commit.sha}-${commit.time}`} className="border-t border-gray-100">
+            {filteredRuns.map((run) => (
+              <tr key={`${run.repo}-${run.sha}`} className="border-t border-gray-100">
                 <td className="px-2 py-1 text-gray-500 whitespace-nowrap">
-                  {commit.time}
+                  {run.time}
                 </td>
                 <td className="px-2 py-1 font-mono whitespace-nowrap">
-                  <a href={`#${commit.sha}`} className="text-blue-600 hover:underline">
-                    {commit.sha}
+                  <a 
+                    href={run.deepLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {run.sha}
                   </a>
                 </td>
                 <td className="px-2 py-1">
-                  <a href={`#${commit.sha}`} className="text-blue-600 hover:underline">
-                    {commit.commit}
-                  </a>
+                  <span className="text-gray-900">{run.commit}</span>
                 </td>
                 <td className="px-2 py-1">
-                  <a href={`#${commit.pr}`} className="text-blue-600 hover:underline">
-                    {commit.pr}
+                  <a 
+                    href={`https://github.com/${run.repo}/pull/${run.pr.substring(1)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {run.pr}
                   </a>
                 </td>
                 <td className="px-2 py-1 text-gray-500">
-                  {commit.author}
+                  {run.author}
                 </td>
                 {workflows.map(workflow => (
                   <td key={workflow} className="px-1 py-1 text-center">
-                    <StatusIcon status={commit.results[workflow] || '~'} />
+                    <StatusIcon status={run.results[workflow]} />
                   </td>
                 ))}
               </tr>
