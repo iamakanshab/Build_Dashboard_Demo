@@ -89,7 +89,7 @@ The database has the folliwing schema
 
 # Initializing the backend 
 
-to initialize the backend database, run the `local-database.py` script with the following arguments:
+to initialize the backend database, run the `populate_db.py` script with the following arguments:
 
 
 `-r`: the repo you want to pull from, should be in the format `'iree-org/iree'`
@@ -102,7 +102,7 @@ to initialize the backend database, run the `local-database.py` script with the 
 
 The full command should look like this
 ```
-python local-database.py -r "iree-org/iree" -k "your key here" -m 1000 -pwd password
+python populate_db.py -r "iree-org/iree" -k "your key here" -m 1000 -pwd password
 ```
 
 ##Step 2: Listener
@@ -121,4 +121,4 @@ python listener.py -r "iree-org/iree" -k "ghp_putyourkeyhere" -p 5000 -pwd passw
 
 If the Listener ever goes down, you can just reuse the same command you used to start it to restart it.
 
-If it has been down for a while, you can use the `local-database.py` script without the `-i` flag and a low `-m` flag
+If it has been down for a while, you can use the `populate_db.py` script without the `-i` flag and a low `-m` flag
