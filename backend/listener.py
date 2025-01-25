@@ -35,21 +35,48 @@ class Dashboard:
         if data.get("ref_type") == "branch":
             try:
                 self.add_branch(data)
-            except Exeption as e:
+            except Exception as e:
                 print(e)
         # handle new commit
         if "commits" in data:
             try:
                 self.add_commit(data)
-            except Exeption as e:
+            except Exception as e:
                 print(e)
         # handle new workflow run
         if "workflow_run" in data:
             try:
                 self.add_workflow_run(data)
-            except Exeption as e:
+            except Exception as e:
+                print(e)
+        if "workflow_job" in data and data.get("action") == "in_progress":
+            try:
+                self.add_initial_queue_time(data)
+            except Exception as e:
                 print(e)
         return "", 200
+
+    def add_initial_queue_time(self, data):
+        start_time = datetime.datetime.fromisoformat(data.get("workflow_job", {}).get("started_at").replace("Z", ""))
+        run_id = data.get("workflow_job", {}).get("run_id")
+        conn = connector(self.password)
+        c = conn.cursor()
+        c.execute("USE shark_dashboard_db")
+        c.execute(
+        """
+        UPDATE workflowruns
+        SET 
+            starttime = %s,
+            queuetime = TIMESTAMPDIFF(SECOND, createtime, %s)
+        WHERE 
+            gitid = %s 
+            AND queuetime = 0.0;
+        """,
+        (start_time, start_time, run_id)
+        )
+        conn.commit()
+        conn.close()
+
 
     def add_commit(self, data):
         conn = connector(self.password)
@@ -127,23 +154,17 @@ class Dashboard:
             runtime = workflow_run.timing().run_duration_ms / 100
         except:
             runtime = (updated_at_dt - started_at_dt).total_seconds()
-        if status == "queued":
-            queue_time = (updated_at_dt - created_at_dt).total_seconds()
-        else:
-            queue_time = (started_at_dt - created_at_dt).total_seconds()
         c.execute(
             """
             INSERT INTO workflowruns 
-                (gitid, author, runtime, createtime, starttime, endtime, queuetime, status, conclusion, url, branchname, commithash, workflowname, repo)
+                (gitid, author, runtime, createtime, endtime, status, conclusion, url, branchname, commithash, workflowname, repo)
             VALUES 
-                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 author = VALUES(author),
                 runtime = VALUES(runtime),
                 createtime = VALUES(createtime),
-                starttime = VALUES(starttime),
                 endtime = VALUES(endtime),
-                queuetime = VALUES(queuetime),
                 status = VALUES(status),
                 conclusion = VALUES(conclusion),
                 url = VALUES(url),
@@ -157,9 +178,7 @@ class Dashboard:
                 author,
                 runtime,
                 created_at_dt,
-                started_at_dt,
                 updated_at_dt,
-                queue_time,
                 status,
                 conclusion,
                 run_url,
