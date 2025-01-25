@@ -1,95 +1,33 @@
-2025-01-22 14:57:33,188 - app - ERROR - Dashboard error: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
-Traceback (most recent call last):
-  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
-    cursor.execute("""
-pyodbc.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
-2025-01-22 14:57:33,369 - app - DEBUG - Connection closed successfully
-2025-01-22 14:57:33,377 - app - DEBUG - Attempting database connection...
-2025-01-22 14:57:33,377 - app - DEBUG - Starting connection attempt...
-2025-01-22 14:57:33,393 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
-2025-01-22 14:57:33,393 - app - DEBUG - Building connection string...
-2025-01-22 14:57:33,393 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
-2025-01-22 14:57:33,393 - app - DEBUG - Attempting pyodbc.connect...
-2025-01-22 14:57:33,475 - app - DEBUG - Connection successful
-2025-01-22 14:57:33,475 - app - DEBUG - Query date range: 2025-01-15 14:57:33.475203 to 2025-01-22 14:57:33.475203
-2025-01-22 14:57:33,475 - app - DEBUG - Executing daily workflow query...
-2025-01-22 14:57:33,563 - app - DEBUG - Retrieved 8 days of workflow data
-2025-01-22 14:57:33,571 - app - DEBUG - Executing metrics query...
-2025-01-22 14:57:33,739 - app - ERROR - Dashboard error: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
-Traceback (most recent call last):
-  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
-    cursor.execute("""
-pyodbc.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207) (SQLExecDirectW)")
-2025-01-22 14:57:33,912 - app - DEBUG - Connection closed successfully
-2025-01-22 14:59:42,562 - app - INFO - Environment variables check:
-2025-01-22 14:59:42,562 - app - INFO - DB_PASSWORD set: False
-2025-01-22 14:59:42,562 - app - INFO - Starting Flask application...
-2025-01-22 14:59:43,763 - app - INFO - Initial database connection test successful
-2025-01-22 15:00:44,838 - app - DEBUG - Attempting database connection...
-2025-01-22 15:00:44,838 - app - DEBUG - Starting connection attempt...
-2025-01-22 15:00:44,838 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
-2025-01-22 15:00:44,838 - app - DEBUG - Building connection string...
-2025-01-22 15:00:44,838 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
-2025-01-22 15:00:44,838 - app - DEBUG - Attempting pyodbc.connect...
-2025-01-22 15:00:44,949 - app - DEBUG - Connection successful
-2025-01-22 15:00:44,954 - app - DEBUG - Query date range: 2025-01-15 15:00:44.954019 to 2025-01-22 15:00:44.954019
-2025-01-22 15:00:44,954 - app - DEBUG - Executing daily workflow query...
-2025-01-22 15:00:45,157 - app - DEBUG - Retrieved 8 days of workflow data
-2025-01-22 15:00:45,157 - app - DEBUG - Executing metrics query...
-2025-01-22 15:00:45,313 - app - ERROR - Dashboard error: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
-Traceback (most recent call last):
-  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
-    cursor.execute("""
-pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
-2025-01-22 15:00:45,490 - app - DEBUG - Connection closed successfully
-2025-01-22 15:00:45,490 - app - DEBUG - Attempting database connection...
-2025-01-22 15:00:45,490 - app - DEBUG - Starting connection attempt...
-2025-01-22 15:00:45,510 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
-2025-01-22 15:00:45,510 - app - DEBUG - Building connection string...
-2025-01-22 15:00:45,510 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
-2025-01-22 15:00:45,510 - app - DEBUG - Attempting pyodbc.connect...
-2025-01-22 15:00:45,590 - app - DEBUG - Connection successful
-2025-01-22 15:00:45,590 - app - DEBUG - Query date range: 2025-01-15 15:00:45.590981 to 2025-01-22 15:00:45.590981
-2025-01-22 15:00:45,590 - app - DEBUG - Executing daily workflow query...
-2025-01-22 15:00:45,683 - app - DEBUG - Retrieved 8 days of workflow data
-2025-01-22 15:00:45,683 - app - DEBUG - Executing metrics query...
-2025-01-22 15:00:45,865 - app - ERROR - Dashboard error: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
-Traceback (most recent call last):
-  File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 190, in get_dashboard_metrics
-    cursor.execute("""
-pyodbc.ProgrammingError: ('42S02', "[42S02] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid object name 'viable_strict_status'. (208) (SQLExecDirectW)")
-2025-01-22 15:00:46,073 - app - DEBUG - Connection closed successfully
-2025-01-24 14:33:56,742 - app - INFO - Environment variables check:
-2025-01-24 14:33:56,749 - app - INFO - DB_PASSWORD set: False
-2025-01-24 14:33:56,751 - app - INFO - Starting Flask application...
-2025-01-24 14:33:58,014 - app - INFO - Initial database connection test successful
-2025-01-24 14:39:22,290 - app - INFO - Environment variables check:
-2025-01-24 14:39:22,296 - app - INFO - DB_PASSWORD set: False
-2025-01-24 14:39:22,299 - app - INFO - Starting Flask application...
-2025-01-24 14:39:23,779 - app - INFO - Initial database connection test successful
-2025-01-24 14:41:59,381 - app - INFO - Environment variables check:
-2025-01-24 14:41:59,382 - app - INFO - DB_PASSWORD set: False
-2025-01-24 14:41:59,384 - app - INFO - Starting Flask application...
-2025-01-24 14:42:00,792 - app - INFO - Initial database connection test successful
-2025-01-24 14:43:20,859 - app - INFO - Environment variables check:
-2025-01-24 14:43:20,859 - app - INFO - DB_PASSWORD set: False
-2025-01-24 14:43:20,859 - app - INFO - Starting Flask application...
-2025-01-24 14:43:22,293 - app - INFO - Initial database connection test successful
-2025-01-24 14:43:42,501 - app - DEBUG - Attempting database connection...
-2025-01-24 14:43:42,501 - app - DEBUG - Starting connection attempt...
-2025-01-24 14:43:42,517 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
-2025-01-24 14:43:42,517 - app - DEBUG - Building connection string...
-2025-01-24 14:43:42,517 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
-2025-01-24 14:43:42,517 - app - DEBUG - Attempting pyodbc.connect...
-2025-01-24 14:43:43,236 - app - DEBUG - Connection successful
-2025-01-24 14:43:43,343 - app - ERROR - Error fetching workflow runs: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'workflow_id'. (207) (SQLExecDirectW); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'commit_message'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'pr_number'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Statement(s) could not be prepared. (8180)")
+2025-01-24 14:43:43,574 - app - DEBUG - Attempting pyodbc.connect...
+2025-01-24 14:43:43,689 - app - DEBUG - Connection successful
+2025-01-24 14:43:43,772 - app - ERROR - Error fetching workflow runs: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'workflow_id'. (207) (SQLExecDirectW); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'commit_message'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'pr_number'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Statement(s) could not be prepared. (8180)")
 Traceback (most recent call last):
   File "C:\Users\akbansal\Downloads\github-dashboard\backend\app.py", line 294, in get_workflowruns
     cursor.execute(query, params)
 pyodbc.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'workflow_id'. (207) (SQLExecDirectW); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'time_to_red_signal'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'commit_message'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'pr_number'. (207); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Statement(s) could not be prepared. (8180)")
-2025-01-24 14:43:43,557 - app - DEBUG - Connection closed successfully
-2025-01-24 14:43:43,562 - app - DEBUG - Attempting database connection...
-2025-01-24 14:43:43,563 - app - DEBUG - Starting connection attempt...
-2025-01-24 14:43:43,572 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
-2025-01-24 14:43:43,572 - app - DEBUG - Building connection string...
-2025-01-24 14:43:43,572 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
+2025-01-24 14:43:43,974 - app - DEBUG - Connection closed successfully
+2025-01-24 14:46:05,972 - app - INFO - Environment variables check:
+2025-01-24 14:46:05,977 - app - INFO - DB_PASSWORD set: False
+2025-01-24 14:46:05,977 - app - INFO - Starting Flask application...
+2025-01-24 14:46:07,358 - app - INFO - Initial database connection test successful
+2025-01-24 15:49:17,843 - app - INFO - Starting Flask application...
+2025-01-24 15:49:32,924 - app - ERROR - Initial database connection test failed: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]TCP Provider: Timeout error [258].  (258) (SQLDriverConnect); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Login timeout expired (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Invalid connection string attribute (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Unable to complete login process due to delay in prelogin response (258)')
+2025-01-24 15:50:34,567 - app - DEBUG - Starting connection attempt...
+2025-01-24 15:50:34,574 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
+2025-01-24 15:50:34,574 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
+2025-01-24 15:50:54,275 - app - DEBUG - Starting connection attempt...
+2025-01-24 15:50:54,280 - app - DEBUG - Using driver versions: ['SQL Server', 'ODBC Driver 17 for SQL Server']
+2025-01-24 15:50:54,280 - app - DEBUG - Connection string (masked): Driver={ODBC Driver 17 for SQL Server};Server=dashboard-backend.database.windows.net,1433;Database=dashboard-backend;UID=CloudSA9134000b;PWD=***;Connect_Timeout=30;Login_Timeout=30;Encrypt=yes;TrustServerCertificate=no;
+2025-01-24 15:50:56,537 - app - ERROR - Detailed connection error: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection because an error was encountered during handshakes before login. Common causes include client attempting to connect to an unsupported version of SQL Server, server too busy to accept new connections or a resource limitation (memory or maximum allowed connections) on the server. (26) (SQLDriverConnect); [08001] [Microsoft][ODBC Driver 17 for SQL Server]TCP Provider: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.\r\n (10060); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection (26); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Invalid connection string attribute (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection due to prelogin failure (10060)')
+2025-01-24 15:50:56,539 - app - ERROR - Error state: 08001
+2025-01-24 15:50:56,540 - app - ERROR - Database error: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection because an error was encountered during handshakes before login. Common causes include client attempting to connect to an unsupported version of SQL Server, server too busy to accept new connections or a resource limitation (memory or maximum allowed connections) on the server. (26) (SQLDriverConnect); [08001] [Microsoft][ODBC Driver 17 for SQL Server]TCP Provider: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.\r\n (10060); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection (26); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Invalid connection string attribute (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection due to prelogin failure (10060)')
+2025-01-24 15:51:13,805 - app - ERROR - Detailed connection error: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection because an error was encountered during handshakes before login. Common causes include client attempting to connect to an unsupported version of SQL Server, server too busy to accept new connections or a resource limitation (memory or maximum allowed connections) on the server. (26) (SQLDriverConnect); [08001] [Microsoft][ODBC Driver 17 for SQL Server]TCP Provider: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.\r\n (10060); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection (26); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Invalid connection string attribute (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection due to prelogin failure (10060)')
+2025-01-24 15:51:13,805 - app - ERROR - Error state: 08001
+2025-01-24 15:51:13,805 - app - ERROR - Database error: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection because an error was encountered during handshakes before login. Common causes include client attempting to connect to an unsupported version of SQL Server, server too busy to accept new connections or a resource limitation (memory or maximum allowed connections) on the server. (26) (SQLDriverConnect); [08001] [Microsoft][ODBC Driver 17 for SQL Server]TCP Provider: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.\r\n (10060); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection (26); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Invalid connection string attribute (0); [08001] [Microsoft][ODBC Driver 17 for SQL Server]Client unable to establish connection due to prelogin failure (10060)')
+2025-01-24 16:00:50,143 - app - INFO - Starting Flask application...
+2025-01-24 16:02:27,810 - app - ERROR - Database error: 2003: Can't connect to MySQL server on 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com:3306' (Errno 10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond)
+2025-01-24 16:02:47,332 - app - ERROR - Database error: 2003: Can't connect to MySQL server on 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com:3306' (Errno 10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond)
+2025-01-24 16:02:49,210 - app - ERROR - Database error: 2003: Can't connect to MySQL server on 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com:3306' (Errno 10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond)
+2025-01-24 16:02:56,353 - app - ERROR - Database error: 2003: Can't connect to MySQL server on 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com:3306' (Errno 10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond)
+2025-01-24 16:03:00,104 - app - ERROR - Database error: 2003: Can't connect to MySQL server on 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com:3306' (Errno 10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond)
+2025-01-24 16:03:00,104 - app - ERROR - Database error: 2003: Can't connect to MySQL server on 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com:3306' (Errno 10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond)
