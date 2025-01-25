@@ -141,7 +141,6 @@ class Dashboard:
         status = workflow_run.get("status")
         gitid = workflow_run.get("id")
         run_url = workflow_run.get("html_url")
-        jobs = workflow_run.get("jobs", {})
         created_at_dt = datetime.datetime.fromisoformat(
             workflow_run.get("created_at").replace("Z", "")
         )
