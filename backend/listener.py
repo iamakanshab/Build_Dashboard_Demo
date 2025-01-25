@@ -35,21 +35,48 @@ class Dashboard:
         if data.get("ref_type") == "branch":
             try:
                 self.add_branch(data)
-            except Exeption as e:
+            except Exception as e:
                 print(e)
         # handle new commit
         if "commits" in data:
             try:
                 self.add_commit(data)
-            except Exeption as e:
+            except Exception as e:
                 print(e)
         # handle new workflow run
         if "workflow_run" in data:
             try:
                 self.add_workflow_run(data)
-            except Exeption as e:
+            except Exception as e:
+                print(e)
+        if "workflow_job" in data and data.get("action") == "in_progress":
+            try:
+                self.add_initial_queue_time(data)
+            except Exception as e:
                 print(e)
         return "", 200
+
+    def add_initial_queue_time(self, data):
+        start_time = datetime.datetime.fromisoformat(data.get("workflow_job", {}).get("started_at").replace("Z", ""))
+        run_id = data.get("workflow_job", {}).get("run_id")
+        conn = connector(self.password)
+        c = conn.cursor()
+        c.execute("USE shark_dashboard_db")
+        c.execute(
+        """
+        UPDATE workflowruns
+        SET 
+            starttime = %s,
+            queuetime = TIMESTAMPDIFF(SECOND, createtime, %s)
+        WHERE 
+            gitid = %s 
+            AND queuetime = 0.0;
+        """,
+        (start_time, start_time, run_id)
+        )
+        conn.commit()
+        conn.close()
+
 
     def add_commit(self, data):
         conn = connector(self.password)

@@ -33,9 +33,12 @@ if __name__ == "__main__":
         author = workflow_run.actor.login
         status = workflow_run.status
         conclusion = workflow_run.conclusion
+        jobs = workflow_run.jobs()
         createtime = workflow_run.created_at
-        starttime = workflow_run.run_started_at
-        print(createtime, starttime)
+        try:
+            starttime = jobs[0].started_at
+        except:
+            starttime = workflow_run.run_started_at
         endtime = workflow_run.updated_at
         if status != "queued":
             queuetime = time.mktime(starttime.timetuple()) - time.mktime(createtime.timetuple())
