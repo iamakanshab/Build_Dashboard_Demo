@@ -154,23 +154,17 @@ class Dashboard:
             runtime = workflow_run.timing().run_duration_ms / 100
         except:
             runtime = (updated_at_dt - started_at_dt).total_seconds()
-        if status == "queued":
-            queue_time = (updated_at_dt - created_at_dt).total_seconds()
-        else:
-            queue_time = (started_at_dt - created_at_dt).total_seconds()
         c.execute(
             """
             INSERT INTO workflowruns 
-                (gitid, author, runtime, createtime, starttime, endtime, queuetime, status, conclusion, url, branchname, commithash, workflowname, repo)
+                (gitid, author, runtime, createtime, endtime, status, conclusion, url, branchname, commithash, workflowname, repo)
             VALUES 
-                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 author = VALUES(author),
                 runtime = VALUES(runtime),
                 createtime = VALUES(createtime),
-                starttime = VALUES(starttime),
                 endtime = VALUES(endtime),
-                queuetime = VALUES(queuetime),
                 status = VALUES(status),
                 conclusion = VALUES(conclusion),
                 url = VALUES(url),
@@ -184,9 +178,7 @@ class Dashboard:
                 author,
                 runtime,
                 created_at_dt,
-                started_at_dt,
                 updated_at_dt,
-                queue_time,
                 status,
                 conclusion,
                 run_url,
