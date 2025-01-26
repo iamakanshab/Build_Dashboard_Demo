@@ -119,6 +119,15 @@ def get_dashboard_metrics(conn):
         app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+@app.route('/api/env', methods=['GET'])
+def test_env():
+    return jsonify({
+        "host": os.getenv('DB_HOST'),
+        "user": os.getenv('DB_USER'),
+        "database": os.getenv('DB_NAME'),
+        "port": os.getenv('DB_PORT')
+    })
+
 @app.route('/api/test-db', methods=['GET'])
 @require_db_connection
 def test_db(conn):
