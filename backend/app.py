@@ -24,6 +24,13 @@ db_config = {
     'port': 3306
 }
 
+def mapStatus(status):
+    if status == 'success':
+        return 'O'
+    elif status == 'failure':
+        return 'X'
+    return '?'
+
 @app.after_request
 def after_request(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -57,6 +64,7 @@ def get_dashboard_metrics():
                 SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed_runs
             FROM workflowruns
             WHERE createtime >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                AND branchname = 'main'
         """)
         
         total_stats = cursor.fetchone()
@@ -65,6 +73,7 @@ def get_dashboard_metrics():
         cursor.execute("""
             SELECT createtime 
             FROM workflowruns 
+            WHERE branchname = 'main'
             ORDER BY createtime DESC 
             LIMIT 1
         """)
@@ -116,27 +125,31 @@ def get_workflowruns():
         
         query = """
             SELECT 
-                gitid as workflow_id,
-                createtime,
-                conclusion,
-                runtime as time_to_red_signal,
-                repo,
-                c.message as commit_message,
-                author,
-                workflowname,
-                os,
-                branchname
+                w.gitid as workflow_id,
+                w.createtime,
+                w.commithash,
+                w.repo,
+                w.author,
+                w.branchname,
+                MAX(CASE WHEN w.os LIKE '%linux%' THEN w.conclusion END) as linux_status,
+                MAX(CASE WHEN w.os LIKE '%windows%' THEN w.conclusion END) as windows_status,
+                MAX(CASE WHEN w.os LIKE '%macos%' THEN w.conclusion END) as macos_status,
+                MAX(CASE WHEN w.workflowname LIKE '%doc%' THEN w.conclusion END) as doc_status,
+                MAX(CASE WHEN w.workflowname LIKE '%lint%' THEN w.conclusion END) as lint_status,
+                MAX(CASE WHEN w.workflowname LIKE '%test%' THEN w.conclusion END) as test_status,
+                c.message as commit_message
             FROM workflowruns w
             LEFT JOIN commits c ON w.commithash = c.hash
-            WHERE createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
+            WHERE w.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
         """
         params = [days]
         
         if repo_filter and repo_filter != 'all':
-            query += " AND repo = %s"
+            query += " AND w.repo = %s"
             params.append(repo_filter)
             
-        query += " ORDER BY createtime DESC"
+        query += " GROUP BY w.gitid, w.createtime, w.commithash, w.repo, w.author, w.branchname, c.message"
+        query += " ORDER BY w.createtime DESC"
         
         cursor.execute(query, params)
         
@@ -145,15 +158,17 @@ def get_workflowruns():
             run = {
                 'workflowId': str(row['workflow_id']),
                 'createTime': row['createtime'].isoformat() if row['createtime'] else None,
-                'conclusion': row['conclusion'],
-                'timeToRedSignal': float(row['time_to_red_signal']) if row['time_to_red_signal'] else None,
                 'repo': row['repo'],
                 'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
-                'prNumber': None,
-                'workflowName': row['workflowname'],
-                'os': row['os'],
-                'branch': row['branchname']
+                'results': {
+                    'Linux': mapStatus(row['linux_status']),
+                    'Win': mapStatus(row['windows_status']),
+                    'Mac': mapStatus(row['macos_status']),
+                    'Doc': mapStatus(row['doc_status']),
+                    'Lint': mapStatus(row['lint_status']),
+                    'Test': mapStatus(row['test_status'])
+                }
             }
             runs.append(run)
         
