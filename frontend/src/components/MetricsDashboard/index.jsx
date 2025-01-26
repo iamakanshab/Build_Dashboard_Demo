@@ -6,6 +6,19 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/metrics/workflow-runs`);
+      const data = await response.json();
+      console.log('Raw response:', data); // Debug
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  };
+  fetchData();
+}, []);
+
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
  <Card>
    <CardContent className="pt-6">

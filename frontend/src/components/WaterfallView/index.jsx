@@ -5,6 +5,19 @@ import StatusIcon from './StatusIcon';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/metrics/workflow-runs`);
+      const data = await response.json();
+      console.log('Raw response:', data); // Debug
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  };
+  fetchData();
+}, []);
+
 const repos = [
   { id: 'pytorch/pytorch', name: 'PyTorch' },
   { id: 'pytorch/vision', name: 'TorchVision' },
