@@ -119,7 +119,7 @@ def get_dashboard_metrics(conn):
         app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
-@app.route('/api/env', methods=['GET'])
+@app.route('/api/test-env', methods=['GET'])
 def test_env():
     return jsonify({
         "host": os.getenv('DB_HOST'),
@@ -129,12 +129,22 @@ def test_env():
     })
 
 @app.route('/api/test-db', methods=['GET'])
-@require_db_connection
-def test_db(conn):
+def test_db():
     try:
+        # Direct connection test without decorator
+        db_config = {
+            'host': 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com',
+            'user': 'admin',
+            'password': 'pwd',
+            'database': 'shark_dashboard_db',
+            'port': 3306
+        }
+        conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
         cursor.execute("SELECT 1")
-        return jsonify({"status": "connected"})
+        result = cursor.fetchone()
+        conn.close()
+        return jsonify({"status": "connected", "result": result[0]})
     except Exception as e:
         return jsonify({"status": "failed", "error": str(e)}), 500
     
