@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 
-const API_BASE_URL = 'http://172.31.1.82:5000/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   <Card>
