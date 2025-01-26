@@ -119,14 +119,13 @@ def get_workflowruns():
         cursor = conn.cursor(dictionary=True)
         days = request.args.get('days', default=7, type=int)
         repo_filter = request.args.get('repo', default=None)
-        
         query = """
             WITH grouped_runs AS (
                 SELECT 
                     DATE(createtime) as run_date,
                     commithash,
                     repo,
-                    GROUP_MAX(conclusion) as overall_conclusion,
+                    MAX(conclusion) as overall_conclusion,
                     MAX(gitid) as workflow_id,
                     MAX(author) as author,
                     MAX(branchname) as branchname
