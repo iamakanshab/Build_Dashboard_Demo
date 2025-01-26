@@ -105,7 +105,6 @@ def get_dashboard_metrics():
         app.logger.error(f"Dashboard error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/metrics/workflow-runs', methods=['GET'])
 def mapStatus(status):
     if status == 'success':
         return 'O'
@@ -113,11 +112,11 @@ def mapStatus(status):
         return 'X'
     return '?'
 
+@app.route('/api/metrics/workflow-runs', methods=['GET'])
 def get_workflowruns():
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
-        
         days = request.args.get('days', default=7, type=int)
         repo_filter = request.args.get('repo', default=None)
         
