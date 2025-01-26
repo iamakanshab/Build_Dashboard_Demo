@@ -7,6 +7,27 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
+// Add console logging
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      console.log('Fetching from:', `${API_BASE_URL}/metrics/dashboard`);
+      const response = await fetch(`${API_BASE_URL}/metrics/dashboard`);
+      const data = await response.json();
+      console.log('Raw data:', data);
+      setData(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   <Card>
     <CardContent className="pt-6">
@@ -19,7 +40,22 @@ const MetricCard = ({ title, value, isRed, size = 'default' }) => (
     </CardContent>
   </Card>
 );
-
+const fetchDashboardData = useCallback(async () => {
+  try {
+    console.log('Fetching dashboard data...');
+    const response = await fetch(`${API_BASE_URL}/metrics/dashboard`);
+    const result = await response.json();
+    console.log('Dashboard data:', result);
+    
+    if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+    if (!result.chartData || !result.metrics) throw new Error('Invalid data structure');
+    
+    setData(result);
+  } catch (err) {
+    console.error('Error:', err);
+    setError(err.message);
+  }
+}, []);
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center p-6">
     <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
