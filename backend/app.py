@@ -24,13 +24,6 @@ db_config = {
     'port': 3306
 }
 
-def mapStatus(status):
-    if status == 'success':
-        return 'O'
-    elif status == 'failure':
-        return 'X'
-    return '?'
-
 @app.after_request
 def after_request(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -64,7 +57,6 @@ def get_dashboard_metrics():
                 SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed_runs
             FROM workflowruns
             WHERE createtime >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-                AND branchname = 'main'
         """)
         
         total_stats = cursor.fetchone()
@@ -73,7 +65,6 @@ def get_dashboard_metrics():
         cursor.execute("""
             SELECT createtime 
             FROM workflowruns 
-            WHERE branchname = 'main'
             ORDER BY createtime DESC 
             LIMIT 1
         """)
@@ -115,6 +106,13 @@ def get_dashboard_metrics():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/metrics/workflow-runs', methods=['GET'])
+def mapStatus(status):
+    if status == 'success':
+        return 'O'
+    elif status == 'failure':
+        return 'X'
+    return '?'
+
 def get_workflowruns():
     try:
         conn = mysql.connector.connect(**db_config)
@@ -124,32 +122,45 @@ def get_workflowruns():
         repo_filter = request.args.get('repo', default=None)
         
         query = """
+            WITH grouped_runs AS (
+                SELECT 
+                    DATE(createtime) as run_date,
+                    commithash,
+                    repo,
+                    GROUP_MAX(conclusion) as overall_conclusion,
+                    MAX(gitid) as workflow_id,
+                    MAX(author) as author,
+                    MAX(branchname) as branchname
+                FROM workflowruns 
+                GROUP BY DATE(createtime), commithash, repo
+            )
             SELECT 
-                w.gitid as workflow_id,
-                w.createtime,
-                w.commithash,
-                w.repo,
-                w.author,
-                w.branchname,
-                MAX(CASE WHEN w.os LIKE '%linux%' THEN w.conclusion END) as linux_status,
-                MAX(CASE WHEN w.os LIKE '%windows%' THEN w.conclusion END) as windows_status,
-                MAX(CASE WHEN w.os LIKE '%macos%' THEN w.conclusion END) as macos_status,
-                MAX(CASE WHEN w.workflowname LIKE '%doc%' THEN w.conclusion END) as doc_status,
-                MAX(CASE WHEN w.workflowname LIKE '%lint%' THEN w.conclusion END) as lint_status,
-                MAX(CASE WHEN w.workflowname LIKE '%test%' THEN w.conclusion END) as test_status,
-                c.message as commit_message
-            FROM workflowruns w
-            LEFT JOIN commits c ON w.commithash = c.hash
-            WHERE w.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                gr.workflow_id,
+                gr.run_date as createtime,
+                MAX(CASE WHEN w1.os = 'linux' THEN w1.conclusion END) as linux_status,
+                MAX(CASE WHEN w1.os = 'windows' THEN w1.conclusion END) as windows_status,
+                MAX(CASE WHEN w1.os = 'macos' THEN w1.conclusion END) as macos_status,
+                MAX(CASE WHEN w1.workflowname LIKE '%doc%' THEN w1.conclusion END) as doc_status,
+                MAX(CASE WHEN w1.workflowname LIKE '%lint%' THEN w1.conclusion END) as lint_status,
+                MAX(CASE WHEN w1.workflowname LIKE '%test%' THEN w1.conclusion END) as test_status,
+                gr.repo,
+                c.message as commit_message,
+                gr.author,
+                gr.branchname
+            FROM grouped_runs gr
+            LEFT JOIN workflowruns w1 ON gr.commithash = w1.commithash 
+                AND gr.repo = w1.repo 
+                AND DATE(gr.run_date) = DATE(w1.createtime)
+            LEFT JOIN commits c ON gr.commithash = c.hash
+            WHERE createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
         """
         params = [days]
         
         if repo_filter and repo_filter != 'all':
-            query += " AND w.repo = %s"
+            query += " AND repo = %s"
             params.append(repo_filter)
             
-        query += " GROUP BY w.gitid, w.createtime, w.commithash, w.repo, w.author, w.branchname, c.message"
-        query += " ORDER BY w.createtime DESC"
+        query += " ORDER BY createtime DESC"
         
         cursor.execute(query, params)
         
