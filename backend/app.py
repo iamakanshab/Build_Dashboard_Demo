@@ -119,6 +119,16 @@ def get_dashboard_metrics(conn):
         app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+@app.route('/api/test-db', methods=['GET'])
+@require_db_connection
+def test_db(conn):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        return jsonify({"status": "connected"})
+    except Exception as e:
+        return jsonify({"status": "failed", "error": str(e)}), 500
+    
 @app.route('/api/metrics/workflow-runs', methods=['GET'])
 @require_db_connection
 def get_workflowruns(conn):
