@@ -6,10 +6,15 @@ from functools import wraps
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+from dotenv import load_load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
+# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=3)
 handler.setLevel(logging.DEBUG)
@@ -17,23 +22,21 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 app.logger.addHandler(handler)
 
-def connector(pwd):
+def get_db_connection():
     db_config = {
-        'host': 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com',
-        'user': 'admin',
-        'password': pwd,
-        'database': 'shark_dashboard_db',
-        'port': 3306
+        'host': os.getenv('DB_HOST'),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'database': os.getenv('DB_NAME'),
+        'port': int(os.getenv('DB_PORT', 3306))
     }
-    connection = mysql.connector.connect(**db_config)
-    return connection
+    return mysql.connector.connect(**db_config)
 
 def require_db_connection(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            db_password = 'q]pR_2g52UwAoD:)Rht?0)Lpa:Ij'
-            conn = connector(db_password)
+            conn = get_db_connection()
             result = f(conn, *args, **kwargs)
             conn.close()
             return result
@@ -57,6 +60,7 @@ def get_dashboard_metrics(conn):
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
 
+        # Get workflow runs data
         cursor.execute("""
             SELECT 
                 DATE(createtime) as date,
@@ -68,14 +72,16 @@ def get_dashboard_metrics(conn):
             ORDER BY date
         """, (start_date, end_date))
         
-        chart_data = []
-        for row in cursor.fetchall():
-            chart_data.append({
+        chart_data = [
+            {
                 'date': row['date'].strftime('%Y-%m-%d'),
                 'total': row['total'],
                 'failed': row['failed']
-            })
+            }
+            for row in cursor.fetchall()
+        ]
 
+        # Get metrics data
         cursor.execute("""
             SELECT
                 (SELECT COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0)
@@ -145,9 +151,8 @@ def get_workflowruns(conn):
         cursor = conn.cursor(dictionary=True)
         cursor.execute(query, params)
         
-        runs = []
-        for row in cursor.fetchall():
-            runs.append({
+        runs = [
+            {
                 'workflowId': row['workflow_id'],
                 'createTime': row['createtime'].isoformat(),
                 'conclusion': row['conclusion'],
@@ -156,7 +161,9 @@ def get_workflowruns(conn):
                 'commitMessage': row['commit_message'],
                 'author': row['author'],
                 'prNumber': row['pr_number']
-            })
+            }
+            for row in cursor.fetchall()
+        ]
         
         return jsonify(runs)
     except Exception as e:
