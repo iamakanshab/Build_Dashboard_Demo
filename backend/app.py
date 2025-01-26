@@ -26,9 +26,9 @@ db_config = {
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
 
 @app.route('/api/metrics/dashboard', methods=['GET'])
@@ -127,10 +127,9 @@ def get_workflowruns():
                 wr.repo,
                 c.message as commit_message,
                 wr.author,
-                p.number as pr_number
+                NULL as pr_number
             FROM workflowruns wr
             LEFT JOIN commits c ON wr.commithash = c.hash
-            LEFT JOIN pull_requests p ON c.pr_id = p.id
             WHERE wr.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
         """
         params = [days]
