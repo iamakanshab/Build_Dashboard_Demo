@@ -1,11 +1,11 @@
+// MetricsDashboard.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 
-// Define API base URL directly since we're in a browser environment
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://172.31.1.82:5000/api';
 
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   <Card>
@@ -20,29 +20,6 @@ const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   </Card>
 );
 
-const QueueTable = ({ queueData }) => (
-  <div className="overflow-x-auto">
-    <table className="w-full">
-      <thead>
-        <tr>
-          <th className="text-left p-2">Count</th>
-          <th className="text-left p-2">Queue time</th>
-          <th className="text-left p-2">Machine Type</th>
-        </tr>
-      </thead>
-      <tbody>
-        {queueData.map((row, index) => (
-          <tr key={index} className="border-t">
-            <td className="p-2">{row.count}</td>
-            <td className="p-2">{row.queueTime}</td>
-            <td className="p-2">{row.machineType}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center p-6">
     <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -51,7 +28,6 @@ const LoadingSpinner = () => (
 
 const MetricsDashboard = () => {
   const [timeRange, setTimeRange] = useState('7');
-  const [percentile, setPercentile] = useState('p50');
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,20 +35,13 @@ const MetricsDashboard = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${API_BASE_URL}/metrics/dashboard?days=${timeRange}&percentile=${percentile}`
-      );
+      const response = await fetch(`${API_BASE_URL}/metrics/dashboard`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const result = await response.json();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
       setData(result);
       setError(null);
     } catch (err) {
@@ -81,51 +50,13 @@ const MetricsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [timeRange, percentile]);
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
-    
-    // Set up polling interval
-    const interval = setInterval(fetchDashboardData, 300000); // Refresh every 5 minutes
-    
+    const interval = setInterval(fetchDashboardData, 300000);
     return () => clearInterval(interval);
   }, [fetchDashboardData]);
-
-  // For development/testing - use mock data if API is not available
-  useEffect(() => {
-    if (!data && !loading && error) {
-      setData({
-        chartData: [
-          { date: '2025-01-14', total: 5, failed: 2, flaky: 1 },
-          { date: '2025-01-15', total: 50, failed: 35, flaky: 3 },
-          { date: '2025-01-16', total: 60, failed: 42, flaky: 2 },
-          { date: '2025-01-17', total: 37, failed: 25, flaky: 4 },
-          { date: '2025-01-18', total: 12, failed: 5, flaky: 1 },
-          { date: '2025-01-19', total: 10, failed: 3, flaky: 0 },
-          { date: '2025-01-20', total: 33, failed: 20, flaky: 2 },
-        ],
-        queueData: [
-          { count: 91, queueTime: '5.7h', machineType: 'linux.room.gpu.mi300.2' },
-          { count: 10, queueTime: '4.1h', machineType: 'linux.room.gpu.mi300.4' },
-        ],
-        metrics: {
-          redOnMain: '60.7',
-          redOnMainFlaky: '2.8',
-          forceMergesFailed: '16.2',
-          forceMergesImpatience: '8.3',
-          timeToRedSignal: '13',
-          timeToRedSignalP75: '5',
-          viableStrictLag: '8.2h',
-          lastMainPush: '17.4m',
-          lastDockerBuild: '2.4h',
-          reverts: '22',
-          pullTrunkTTS: '3.1h'
-        }
-      });
-      setError(null);
-    }
-  }, [data, loading, error]);
 
   if (loading && !data) {
     return <LoadingSpinner />;
@@ -135,48 +66,32 @@ const MetricsDashboard = () => {
     return null;
   }
 
-  const { chartData, queueData, metrics } = data;
+  const { chartData, metrics } = data;
 
   return (
     <div className="p-6 space-y-6">
       {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>
-            {error} - Using mock data for preview
-          </AlertDescription>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       
-      {/* Header and Controls */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">CI Metrics</h1>
-        <div className="flex gap-4">
-          <select 
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="border p-2 rounded"
-          >
-            <option value="7">Last 7 Days</option>
-            <option value="14">Last 14 Days</option>
-            <option value="30">Last 30 Days</option>
-          </select>
-          <select 
-            value={percentile}
-            onChange={(e) => setPercentile(e.target.value)}
-            className="border p-2 rounded"
-          >
-            <option value="p50">p50</option>
-            <option value="p75">p75</option>
-            <option value="p90">p90</option>
-          </select>
-        </div>
+        <select 
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value)}
+          className="border p-2 rounded"
+        >
+          <option value="7">Last 7 Days</option>
+          <option value="14">Last 14 Days</option>
+          <option value="30">Last 30 Days</option>
+        </select>
       </div>
 
-      {/* Main Chart */}
       <Card>
         <CardHeader>
           <CardTitle>Commits red on main, by day</CardTitle>
-          <div className="text-sm text-gray-500">Based on workflows which block viable/strict upgrade</div>
         </CardHeader>
         <CardContent>
           <div className="h-80">
@@ -187,121 +102,42 @@ const MetricsDashboard = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="total" stackId="a" fill="#4ade80" name="Success" />
+                <Bar dataKey="total" stackId="a" fill="#4ade80" name="Total" />
                 <Bar dataKey="failed" stackId="a" fill="#f87171" name="Failed" />
-                <Bar dataKey="flaky" stackId="a" fill="#fbbf24" name="Flaky" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
-      {/* Top Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
-          title="% commits red on main (broken trunk)"
+          title="% commits red on main"
           value={`${metrics.redOnMain}%`}
           isRed={true}
           size="large"
         />
         <MetricCard
-          title="% force merges due to failed PR checks"
-          value={`${metrics.forceMergesFailed}%`}
-          isRed={true}
-          size="large"
-        />
-        <MetricCard
-          title="Time to Red Signal (p90 TTRS - mins)"
-          value={metrics.timeToRedSignal}
-          isRed={false}
-          size="large"
-        />
-      </div>
-
-      {/* Middle Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard
-          title="% commits red on main (flaky)"
+          title="% commits flaky"
           value={`${metrics.redOnMainFlaky}%`}
           isRed={true}
-        />
-        <MetricCard
-          title="% force merges due to impatience"
-          value={`${metrics.forceMergesImpatience}%`}
-          isRed={true}
-        />
-        <MetricCard
-          title="Time to Red Signal (p75 TTRS - mins)"
-          value={metrics.timeToRedSignalP75}
-          isRed={false}
-        />
-      </div>
-
-      {/* Bottom Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-        <MetricCard
-          title="viable/strict lag"
-          value={metrics.viableStrictLag}
-          isRed={true}
-        />
-        <MetricCard
-          title="Last main push"
-          value={metrics.lastMainPush}
-          isRed={false}
+          size="large"
         />
         <MetricCard
           title="Last docker build"
           value={metrics.lastDockerBuild}
           isRed={false}
-        />
-        <MetricCard
-          title="# reverts"
-          value={metrics.reverts}
-          isRed={true}
-        />
-        <MetricCard
-          title="p50 pull, trunk TTS"
-          value={metrics.pullTrunkTTS}
-          isRed={false}
+          size="large"
         />
       </div>
 
-      {/* Queue Data Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Queued Jobs by Machine Type</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <QueueTable queueData={queueData} />
-        </CardContent>
-      </Card>
-
-      {/* Queue Times Historical Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Queue times historical</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="total" 
-                  stroke="#2563eb" 
-                  name="Queue Time"
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <MetricCard
+          title="Last main push"
+          value={metrics.lastMainPush}
+          isRed={false}
+        />
+      </div>
     </div>
   );
 };
