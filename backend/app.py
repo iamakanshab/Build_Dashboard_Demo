@@ -37,7 +37,6 @@ def get_dashboard_metrics():
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
         
-        # Get daily metrics for the last 7 days
         cursor.execute("""
             SELECT 
                 DATE(createtime) as date,
@@ -52,7 +51,6 @@ def get_dashboard_metrics():
         
         daily_data = cursor.fetchall()
         
-        # Calculate red on main percentage
         cursor.execute("""
             SELECT 
                 COUNT(*) as total_runs,
@@ -64,7 +62,6 @@ def get_dashboard_metrics():
         total_stats = cursor.fetchone()
         red_on_main = (total_stats['failed_runs'] / total_stats['total_runs'] * 100) if total_stats['total_runs'] > 0 else 0
         
-        # Get latest workflow run time
         cursor.execute("""
             SELECT createtime 
             FROM workflowruns 
@@ -82,7 +79,6 @@ def get_dashboard_metrics():
             else:
                 last_push = f"{time_diff.seconds // 60}m"
 
-        # Format chart data
         chart_data = [{
             'date': row['date'].strftime('%Y-%m-%d'),
             'Success': int(row['success'] or 0),
@@ -92,9 +88,9 @@ def get_dashboard_metrics():
 
         metrics = {
             'redOnMain': f"{red_on_main:.1f}",
-            'redOnMainFlaky': "0.0",  # Implement flaky detection if available
+            'redOnMainFlaky': "0.0",
             'lastMainPush': last_push,
-            'lastDockerBuild': "N/A"  # Implement if docker build tracking is available
+            'lastDockerBuild': "N/A"
         }
 
         cursor.close()
@@ -116,43 +112,48 @@ def get_workflowruns():
         cursor = conn.cursor(dictionary=True)
         
         days = request.args.get('days', default=7, type=int)
-        repo = request.args.get('repo', default=None)
+        repo_filter = request.args.get('repo', default=None)
         
         query = """
             SELECT 
-                wr.gitid as workflow_id,
-                wr.createtime,
-                wr.conclusion,
-                wr.runtime as time_to_red_signal,
-                wr.repo,
+                gitid as workflow_id,
+                createtime,
+                conclusion,
+                runtime as time_to_red_signal,
+                repo,
                 c.message as commit_message,
-                wr.author,
-                NULL as pr_number
-            FROM workflowruns wr
-            LEFT JOIN commits c ON wr.commithash = c.hash
-            WHERE wr.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                author,
+                workflowname,
+                os,
+                branchname
+            FROM workflowruns w
+            LEFT JOIN commits c ON w.commithash = c.hash
+            WHERE createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
         """
         params = [days]
         
-        if repo and repo != 'all':
-            query += " AND wr.repo = %s"
-            params.append(repo)
+        if repo_filter and repo_filter != 'all':
+            query += " AND repo = %s"
+            params.append(repo_filter)
             
-        query += " ORDER BY wr.createtime DESC"
+        query += " ORDER BY createtime DESC"
         
         cursor.execute(query, params)
         
         runs = []
         for row in cursor.fetchall():
             run = {
-                'workflowId': row['workflow_id'],
+                'workflowId': str(row['workflow_id']),
                 'createTime': row['createtime'].isoformat() if row['createtime'] else None,
                 'conclusion': row['conclusion'],
                 'timeToRedSignal': float(row['time_to_red_signal']) if row['time_to_red_signal'] else None,
                 'repo': row['repo'],
                 'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
-                'prNumber': row['pr_number']
+                'prNumber': None,
+                'workflowName': row['workflowname'],
+                'os': row['os'],
+                'branch': row['branchname']
             }
             runs.append(run)
         
