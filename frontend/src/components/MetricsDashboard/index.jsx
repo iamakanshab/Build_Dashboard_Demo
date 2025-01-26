@@ -1,3 +1,4 @@
+// components/MetricsDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2 } from 'lucide-react';
@@ -19,12 +20,6 @@ const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   </Card>
 );
 
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center p-6">
-    <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-  </div>
-);
-
 const MetricsDashboard = () => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -32,12 +27,21 @@ const MetricsDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
+      console.log('Fetching metrics from:', `${API_BASE_URL}/metrics/dashboard`);
       const response = await fetch(`${API_BASE_URL}/metrics/dashboard`);
-      if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+      console.log('Response:', response);
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result = await response.json();
-      console.log('Dashboard API response:', result);
+      console.log('Dashboard data:', result);
       
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
       if (!result.chartData || !result.metrics) {
         throw new Error('Invalid data structure received from API');
       }
@@ -54,23 +58,34 @@ const MetricsDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 300000); // Refresh every 5 minutes
+    const interval = setInterval(fetchDashboardData, 300000);
     return () => clearInterval(interval);
   }, []);
 
-  if (loading && !data) return <LoadingSpinner />;
+  if (loading && !data) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   if (!data) return null;
 
   const { chartData, metrics } = data;
 
   return (
     <div className="p-6 space-y-6">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">CI Metrics</h1>
       </div>
