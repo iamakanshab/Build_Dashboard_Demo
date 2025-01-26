@@ -2,19 +2,13 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import mysql.connector
-from functools import wraps
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=3)
 handler.setLevel(logging.DEBUG)
@@ -22,28 +16,13 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 app.logger.addHandler(handler)
 
-def get_db_connection():
-    db_config = {
-        'host': os.getenv('DB_HOST'),
-        'user': os.getenv('DB_USER'),
-        'password': os.getenv('DB_PASSWORD'),
-        'database': os.getenv('DB_NAME'),
-        'port': int(os.getenv('DB_PORT', 3306))
-    }
-    return mysql.connector.connect(**db_config)
-
-def require_db_connection(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            conn = get_db_connection()
-            result = f(conn, *args, **kwargs)
-            conn.close()
-            return result
-        except Exception as e:
-            app.logger.error(f"Database error: {str(e)}")
-            return jsonify({'error': 'Database connection failed'}), 500
-    return decorated_function
+db_config = {
+    'host': 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com',
+    'user': 'admin',
+    'password': 'pwd',
+    'database': 'shark_dashboard_db',
+    'port': 3306
+}
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -53,14 +32,13 @@ def health_check():
     })
 
 @app.route('/api/metrics/dashboard', methods=['GET'])
-@require_db_connection
-def get_dashboard_metrics(conn):
+def get_dashboard_metrics():
     try:
+        conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
 
-        # Get workflow runs data
         cursor.execute("""
             SELECT 
                 DATE(createtime) as date,
@@ -81,25 +59,15 @@ def get_dashboard_metrics(conn):
             for row in cursor.fetchall()
         ]
 
-        # Get metrics data
         cursor.execute("""
             SELECT
                 (SELECT COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0)
                 FROM workflowruns WHERE conclusion = 'failure') as red_on_main,
-                
                 (SELECT COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0)
                 FROM workflowruns) as red_on_main_flaky,
-                
-                (SELECT time
-                FROM commits
-                ORDER BY time DESC
-                LIMIT 1) as last_main_push,
-                
-                (SELECT createtime 
-                FROM workflowruns
-                WHERE conclusion = 'success'
-                ORDER BY createtime DESC
-                LIMIT 1) as last_docker_build
+                (SELECT time FROM commits ORDER BY time DESC LIMIT 1) as last_main_push,
+                (SELECT createtime FROM workflowruns WHERE conclusion = 'success'
+                ORDER BY createtime DESC LIMIT 1) as last_docker_build
         """)
         
         metrics_row = cursor.fetchone()
@@ -110,48 +78,33 @@ def get_dashboard_metrics(conn):
             'lastDockerBuild': f"{(datetime.now() - metrics_row['last_docker_build']).total_seconds() / 3600:.1f}h" if metrics_row['last_docker_build'] else "N/A"
         }
 
-        return jsonify({
-            'chartData': chart_data,
-            'metrics': metrics
-        })
+        cursor.close()
+        conn.close()
+        return jsonify({'chartData': chart_data, 'metrics': metrics})
 
     except Exception as e:
         app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
-@app.route('/api/test-env', methods=['GET'])
-def test_env():
-    return jsonify({
-        "host": os.getenv('DB_HOST'),
-        "user": os.getenv('DB_USER'),
-        "database": os.getenv('DB_NAME'),
-        "port": os.getenv('DB_PORT')
-    })
-
 @app.route('/api/test-db', methods=['GET'])
 def test_db():
     try:
-        # Direct connection test without decorator
-        db_config = {
-            'host': 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com',
-            'user': 'admin',
-            'password': 'pwd',
-            'database': 'shark_dashboard_db',
-            'port': 3306
-        }
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
         cursor.execute("SELECT 1")
         result = cursor.fetchone()
+        cursor.close()
         conn.close()
         return jsonify({"status": "connected", "result": result[0]})
     except Exception as e:
         return jsonify({"status": "failed", "error": str(e)}), 500
-    
+
 @app.route('/api/metrics/workflow-runs', methods=['GET'])
-@require_db_connection
-def get_workflowruns(conn):
+def get_workflowruns():
     try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+        
         days = request.args.get('days', default=7, type=int)
         repo = request.args.get('repo', default=None)
         
@@ -177,9 +130,7 @@ def get_workflowruns(conn):
             
         query += " ORDER BY createtime DESC"
         
-        cursor = conn.cursor(dictionary=True)
         cursor.execute(query, params)
-        
         runs = [
             {
                 'workflowId': row['workflow_id'],
@@ -194,6 +145,8 @@ def get_workflowruns(conn):
             for row in cursor.fetchall()
         ]
         
+        cursor.close()
+        conn.close()
         return jsonify(runs)
     except Exception as e:
         app.logger.error(f"Error fetching workflow runs: {str(e)}", exc_info=True)
