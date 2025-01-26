@@ -6,7 +6,7 @@ from functools import wraps
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from dotenv import load_load_dotenv
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
