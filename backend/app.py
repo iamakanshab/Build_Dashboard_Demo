@@ -38,61 +38,6 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
-@app.route('/api/metrics/dashboard', methods=['GET'])
-def get_dashboard_metrics():
-    try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=7)
-
-        cursor.execute("""
-            SELECT 
-                DATE(createtime) as date,
-                COUNT(*) as total,
-                SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed
-            FROM workflowruns
-            WHERE createtime BETWEEN %s AND %s
-            GROUP BY DATE(createtime)
-            ORDER BY date
-        """, (start_date, end_date))
-        
-        chart_data = [
-            {
-                'date': row['date'].strftime('%Y-%m-%d'),
-                'total': row['total'],
-                'failed': row['failed']
-            }
-            for row in cursor.fetchall()
-        ]
-
-        cursor.execute("""
-            SELECT
-                (SELECT COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0)
-                FROM workflowruns WHERE conclusion = 'failure') as red_on_main,
-                (SELECT COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0)
-                FROM workflowruns) as red_on_main_flaky,
-                (SELECT time FROM commits ORDER BY time DESC LIMIT 1) as last_main_push,
-                (SELECT createtime FROM workflowruns WHERE conclusion = 'success'
-                ORDER BY createtime DESC LIMIT 1) as last_docker_build
-        """)
-        
-        metrics_row = cursor.fetchone()
-        metrics = {
-            'redOnMain': str(metrics_row['red_on_main'] or 0),
-            'redOnMainFlaky': str(metrics_row['red_on_main_flaky'] or 0),
-            'lastMainPush': f"{(datetime.now() - metrics_row['last_main_push']).total_seconds() / 60:.1f}m" if metrics_row['last_main_push'] else "N/A",
-            'lastDockerBuild': f"{(datetime.now() - metrics_row['last_docker_build']).total_seconds() / 3600:.1f}h" if metrics_row['last_docker_build'] else "N/A"
-        }
-
-        cursor.close()
-        conn.close()
-        return jsonify({'chartData': chart_data, 'metrics': metrics})
-
-    except Exception as e:
-        app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
-
 @app.route('/api/test-db', methods=['GET'])
 def test_db():
     try:
@@ -105,6 +50,70 @@ def test_db():
         return jsonify({"status": "connected", "result": result[0]})
     except Exception as e:
         return jsonify({"status": "failed", "error": str(e)}), 500
+
+@app.route('/api/metrics/dashboard', methods=['GET'])
+def get_dashboard_metrics():
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        
+        cursor.execute("""
+            SELECT 
+                DATE(createtime) as date,
+                COUNT(*) as total,
+                COUNT(CASE WHEN conclusion = 'failure' THEN 1 END) as failed,
+                COUNT(CASE WHEN conclusion = 'success' THEN 1 END) as success
+            FROM workflowruns
+            WHERE createtime BETWEEN %s AND %s
+            GROUP BY DATE(createtime)
+            ORDER BY date
+        """, (start_date, end_date))
+        
+        chart_data = [
+            {
+                'date': row['date'].strftime('%Y-%m-%d'),
+                'total': int(row['success'] or 0),
+                'failed': int(row['failed'] or 0),
+                'flaky': 0
+            }
+            for row in cursor.fetchall()
+        ]
+        
+        cursor.execute("""
+            SELECT
+                (SELECT COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0)
+                FROM workflowruns WHERE conclusion = 'failure') as red_on_main,
+                
+                (SELECT COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM workflowruns), 0)
+                FROM workflowruns WHERE conclusion IN ('success', 'failure')) as red_on_main_flaky,
+                
+                (SELECT time FROM commits ORDER BY time DESC LIMIT 1) as last_main_push,
+                
+                (SELECT createtime FROM workflowruns 
+                WHERE conclusion = 'success' ORDER BY createtime DESC LIMIT 1) as last_docker_build
+        """)
+        
+        metrics_row = cursor.fetchone()
+        now = datetime.now()
+        last_push = metrics_row['last_main_push']
+        last_build = metrics_row['last_docker_build']
+        
+        metrics = {
+            'redOnMain': f"{float(metrics_row['red_on_main'] or 0):.1f}",
+            'redOnMainFlaky': f"{float(metrics_row['red_on_main_flaky'] or 0):.1f}",
+            'lastMainPush': f"{(now - last_push).total_seconds() / 60:.1f}m" if last_push else "N/A",
+            'lastDockerBuild': f"{(now - last_build).total_seconds() / 3600:.1f}h" if last_build else "N/A"
+        }
+
+        cursor.close()
+        conn.close()
+        return jsonify({'chartData': chart_data, 'metrics': metrics})
+
+    except Exception as e:
+        app.logger.error(f"Dashboard error: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @app.route('/api/metrics/workflow-runs', methods=['GET'])
 def get_workflowruns():
