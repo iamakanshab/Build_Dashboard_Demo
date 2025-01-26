@@ -31,72 +31,74 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat()
-    })
-
-@app.route('/api/test-db', methods=['GET'])
-def test_db():
-    try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        result = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return jsonify({"status": "connected", "result": result[0]})
-    except Exception as e:
-        return jsonify({"status": "failed", "error": str(e)}), 500
-
 @app.route('/api/metrics/dashboard', methods=['GET'])
 def get_dashboard_metrics():
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
         
-        # Get daily metrics
+        # Get daily metrics for the last 7 days
         cursor.execute("""
             SELECT 
                 DATE(createtime) as date,
                 COUNT(*) as total,
-                COUNT(CASE WHEN conclusion = 'failure' THEN 1 END) as failed,
-                COUNT(CASE WHEN conclusion = 'success' THEN 1 END) as success
+                SUM(CASE WHEN conclusion = 'success' THEN 1 ELSE 0 END) as success,
+                SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed
             FROM workflowruns
             WHERE createtime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
             GROUP BY DATE(createtime)
-            ORDER BY date
+            ORDER BY date DESC
         """)
         
-        chart_data = [
-            {
-                'date': row['date'].strftime('%Y-%m-%d'),
-                'Success': int(row['success'] or 0),
-                'Failed': int(row['failed'] or 0),
-                'total': int(row['total'] or 0)
-            }
-            for row in cursor.fetchall()
-        ]
-
-        # Get metrics data
+        daily_data = cursor.fetchall()
+        
+        # Calculate red on main percentage
         cursor.execute("""
-            SELECT
+            SELECT 
                 COUNT(*) as total_runs,
-                COUNT(CASE WHEN conclusion = 'failure' THEN 1 END) as failed_runs
+                SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed_runs
             FROM workflowruns
+            WHERE createtime >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
         """)
         
-        counts = cursor.fetchone()
-        failure_rate = (counts['failed_runs'] / counts['total_runs'] * 100) if counts['total_runs'] > 0 else 0
+        total_stats = cursor.fetchone()
+        red_on_main = (total_stats['failed_runs'] / total_stats['total_runs'] * 100) if total_stats['total_runs'] > 0 else 0
         
+        # Get latest workflow run time
+        cursor.execute("""
+            SELECT createtime 
+            FROM workflowruns 
+            ORDER BY createtime DESC 
+            LIMIT 1
+        """)
+        latest_run = cursor.fetchone()
+        last_push = "N/A"
+        if latest_run:
+            time_diff = datetime.now() - latest_run['createtime']
+            if time_diff.days > 0:
+                last_push = f"{time_diff.days}d"
+            elif time_diff.seconds >= 3600:
+                last_push = f"{time_diff.seconds // 3600}h"
+            else:
+                last_push = f"{time_diff.seconds // 60}m"
+
+        # Format chart data
+        chart_data = [{
+            'date': row['date'].strftime('%Y-%m-%d'),
+            'Success': int(row['success'] or 0),
+            'Failed': int(row['failed'] or 0),
+            'total': int(row['total'] or 0)
+        } for row in daily_data]
+
         metrics = {
-            'redOnMain': f"{failure_rate:.1f}",
-            'redOnMainFlaky': "0.0",
-            'lastMainPush': "10m",
-            'lastDockerBuild': "2.5h"
+            'redOnMain': f"{red_on_main:.1f}",
+            'redOnMainFlaky': "0.0",  # Implement flaky detection if available
+            'lastMainPush': last_push,
+            'lastDockerBuild': "N/A"  # Implement if docker build tracking is available
         }
+
+        cursor.close()
+        conn.close()
 
         return jsonify({
             'chartData': chart_data,
@@ -118,17 +120,18 @@ def get_workflowruns():
         
         query = """
             SELECT 
-                gitid as workflow_id,
-                createtime,
-                conclusion,
-                runtime as time_to_red_signal,
+                wr.gitid as workflow_id,
+                wr.createtime,
+                wr.conclusion,
+                wr.runtime as time_to_red_signal,
                 wr.repo,
                 c.message as commit_message,
                 wr.author,
-                NULL as pr_number
+                p.number as pr_number
             FROM workflowruns wr
             LEFT JOIN commits c ON wr.commithash = c.hash
-            WHERE createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
+            LEFT JOIN pull_requests p ON c.pr_id = p.id
+            WHERE wr.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
         """
         params = [days]
         
@@ -136,26 +139,28 @@ def get_workflowruns():
             query += " AND wr.repo = %s"
             params.append(repo)
             
-        query += " ORDER BY createtime DESC"
+        query += " ORDER BY wr.createtime DESC"
         
         cursor.execute(query, params)
-        runs = [
-            {
+        
+        runs = []
+        for row in cursor.fetchall():
+            run = {
                 'workflowId': row['workflow_id'],
-                'createTime': row['createtime'].isoformat(),
+                'createTime': row['createtime'].isoformat() if row['createtime'] else None,
                 'conclusion': row['conclusion'],
-                'timeToRedSignal': row['time_to_red_signal'],
+                'timeToRedSignal': float(row['time_to_red_signal']) if row['time_to_red_signal'] else None,
                 'repo': row['repo'],
-                'commitMessage': row['commit_message'],
+                'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
                 'prNumber': row['pr_number']
             }
-            for row in cursor.fetchall()
-        ]
+            runs.append(run)
         
         cursor.close()
         conn.close()
         return jsonify(runs)
+        
     except Exception as e:
         app.logger.error(f"Error fetching workflow runs: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
