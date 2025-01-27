@@ -1,11 +1,12 @@
-// components/MetricsDashboard.jsx
+// MetricsDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
-import { Alert, AlertDescription } from '../../components/ui/alert';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// Hardcoded API URL
+const API_URL = 'http://localhost:5000';
 
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   <Card>
@@ -27,8 +28,8 @@ const MetricsDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      console.log('Fetching metrics from:', `${API_BASE_URL}/metrics/dashboard`);
-      const response = await fetch(`${API_BASE_URL}/metrics/dashboard`);
+      console.log('Fetching metrics from:', `${API_URL}/api/metrics/dashboard`);
+      const response = await fetch(`${API_URL}/api/metrics/dashboard`);
       console.log('Response:', response);
       
       if (!response.ok) {
@@ -42,10 +43,6 @@ const MetricsDashboard = () => {
         throw new Error(result.error);
       }
 
-      if (!result.chartData || !result.metrics) {
-        throw new Error('Invalid data structure received from API');
-      }
-      
       setData(result);
       setError(null);
     } catch (err) {
@@ -58,7 +55,7 @@ const MetricsDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 300000);
+    const interval = setInterval(fetchDashboardData, 300000); // 5 minutes
     return () => clearInterval(interval);
   }, []);
 

@@ -7,7 +7,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -34,6 +34,13 @@ def get_db_connection():
         app.logger.error(f"Database connection error: {str(e)}")
         raise
 
+@app.after_request
+def after_request(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+    return response
+
 @app.route('/api/metrics/dashboard', methods=['GET'])
 def get_dashboard_metrics():
     try:
@@ -49,7 +56,6 @@ def get_dashboard_metrics():
                 SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed
             FROM workflowruns
             WHERE createtime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                AND branchname = 'main'
             GROUP BY DATE(createtime)
             ORDER BY date DESC
         """)
@@ -63,7 +69,6 @@ def get_dashboard_metrics():
                 SUM(CASE WHEN conclusion = 'failure' THEN 1 ELSE 0 END) as failed_runs
             FROM workflowruns
             WHERE createtime >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-                AND branchname = 'main'
         """)
         
         total_stats = cursor.fetchone()
@@ -73,7 +78,6 @@ def get_dashboard_metrics():
         cursor.execute("""
             SELECT createtime 
             FROM workflowruns 
-            WHERE branchname = 'main'
             ORDER BY createtime DESC 
             LIMIT 1
         """)
@@ -99,9 +103,9 @@ def get_dashboard_metrics():
 
         metrics = {
             'redOnMain': f"{red_on_main:.1f}",
-            'redOnMainFlaky': "0.0",  # Placeholder for flaky test metric
+            'redOnMainFlaky': "0.0",
             'lastMainPush': last_push,
-            'lastDockerBuild': "N/A"  # Placeholder for docker build time
+            'lastDockerBuild': "N/A"
         }
 
         cursor.close()
@@ -125,80 +129,81 @@ def get_workflow_runs():
         days = request.args.get('days', default=7, type=int)
         repo_filter = request.args.get('repo', default=None)
         
-        # Main query with common table expression for grouped runs
+        # Base query with joins to get commit messages
         query = """
-            WITH grouped_runs AS (
-                SELECT 
-                    DATE(wr.createtime) as run_date,
-                    wr.commithash,
-                    wr.repo,
-                    wr.gitid as workflow_id,
-                    wr.author,
-                    wr.branchname,
-                    c.message as commit_message,
-                    wr.createtime
-                FROM workflowruns wr
-                LEFT JOIN commits c ON wr.commithash = c.hash AND wr.repo = c.repo
-                WHERE wr.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
-                GROUP BY DATE(wr.createtime), wr.commithash, wr.repo
-            )
             SELECT 
-                gr.*,
-                MAX(CASE WHEN w.os = 'linux' THEN w.conclusion END) as linux_status,
-                MAX(CASE WHEN w.os = 'windows' THEN w.conclusion END) as windows_status,
-                MAX(CASE WHEN w.os = 'macos' THEN w.conclusion END) as macos_status,
-                MAX(CASE WHEN w.workflowname LIKE '%doc%' THEN w.conclusion END) as doc_status,
-                MAX(CASE WHEN w.workflowname LIKE '%lint%' THEN w.conclusion END) as lint_status,
-                MAX(CASE WHEN w.workflowname LIKE '%test%' THEN w.conclusion END) as test_status
-            FROM grouped_runs gr
-            LEFT JOIN workflowruns w ON gr.commithash = w.commithash AND gr.repo = w.repo
-            WHERE 1=1
+                wr.gitid as workflow_id,
+                wr.author,
+                wr.createtime,
+                wr.repo,
+                c.message as commit_message,
+                GROUP_CONCAT(
+                    CONCAT(
+                        CASE 
+                            WHEN wr.os IS NOT NULL THEN wr.os
+                            WHEN wr.workflowname LIKE '%doc%' THEN 'Doc'
+                            WHEN wr.workflowname LIKE '%lint%' THEN 'Lint'
+                            WHEN wr.workflowname LIKE '%test%' THEN 'Test'
+                        END,
+                        ':',
+                        CASE WHEN wr.conclusion = 'success' THEN 'O'
+                             WHEN wr.conclusion = 'failure' THEN 'X'
+                             ELSE '?' END
+                    )
+                ) as result_data
+            FROM workflowruns wr
+            LEFT JOIN commits c ON wr.commithash = c.hash AND wr.repo = c.repo
+            WHERE wr.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
         """
         
         params = [days]
         
         if repo_filter and repo_filter != 'all':
-            query += " AND gr.repo = %s"
+            query += " AND wr.repo = %s"
             params.append(repo_filter)
             
-        query += " GROUP BY gr.workflow_id, gr.createtime ORDER BY gr.createtime DESC"
+        query += " GROUP BY wr.gitid, wr.author, wr.createtime, wr.repo, c.message ORDER BY wr.createtime DESC"
         
         cursor.execute(query, params)
-        runs = []
         
+        runs = []
         for row in cursor.fetchall():
+            # Initialize default results
+            results = {
+                'Linux': '?', 'Win': '?', 'Mac': '?',
+                'Doc': '?', 'Lint': '?', 'Test': '?'
+            }
+            
+            # Parse concatenated results
+            if row['result_data']:
+                for result in row['result_data'].split(','):
+                    key, value = result.split(':')
+                    if key.lower() == 'windows':
+                        key = 'Win'
+                    elif key.lower() == 'macos':
+                        key = 'Mac'
+                    if key in results:
+                        results[key] = value
+
             run = {
                 'workflowId': str(row['workflow_id']),
                 'createTime': row['createtime'].isoformat() if row['createtime'] else None,
                 'repo': row['repo'],
                 'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
-                'results': {
-                    'Linux': map_status(row['linux_status']),
-                    'Win': map_status(row['windows_status']),
-                    'Mac': map_status(row['macos_status']),
-                    'Doc': map_status(row['doc_status']),
-                    'Lint': map_status(row['lint_status']),
-                    'Test': map_status(row['test_status'])
-                }
+                'results': results
             }
             runs.append(run)
 
         cursor.close()
         conn.close()
+        
+        app.logger.info(f"Returning {len(runs)} workflow runs")
         return jsonify(runs)
 
     except Exception as e:
-        app.logger.error(f"Workflow runs error: {str(e)}")
+        app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
-def map_status(status):
-    """Map workflow status to display characters"""
-    if status == 'success':
-        return 'O'
-    elif status == 'failure':
-        return 'X'
-    return '?'
 
 if __name__ == '__main__':
     app.logger.info("Starting Flask application...")
