@@ -8,6 +8,7 @@ import pickle
 import os
 import argparse
 from sqlauthenticator import connector
+import json
 
 class Dashboard:
 
@@ -88,12 +89,13 @@ class Dashboard:
         for commit in data.get("commits", []):
             commit_hash = commit.get("id")
             try:
-                author = data.get("author", {}).get("name")
-                commit_time = data.get("author, {}").get("date")
+                author = data.get("pusher", {}).get("name")
+                commit_time = data.get("head_commit", {}).get("timestamp")
             except:
-                print(f"No Author found for {commit_hashj}")
+                print(f"No Author found for {commit_hash}")
+                commit_time = None
+                author = None
             message = commit.get("message")
-            commit_time = time.mktime(commit_time.timetuple())
             c.execute(
                 """
                 INSERT INTO commits (hash, author, message, time, repo)
@@ -104,7 +106,7 @@ class Dashboard:
                     time = VALUES(time),
                     repo = VALUES(repo);
                 """,
-                (commit_hash, author, message, self.repo_path),
+                (commit_hash, author, message, commit_time, self.repo_path),
             )
         conn.commit()
         conn.close()
