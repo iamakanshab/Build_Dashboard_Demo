@@ -15,10 +15,11 @@ Users can configure repository-specific settings and customize metric collection
    - [Application Setup](#2-application-setup)
    - [Database Configuration](#3-configure-database)
    - [Service Setup](#4-setup-service)
-4. [Data Model](#data-model)
-5. [Monitoring](#monitoring)
-6. [Troubleshooting](#troubleshooting)
-7. [Contact and Support](#contact-and-support)
+4. [Architecture](#arch-diagram)
+5. [Data Model](#data-model)
+6. [Monitoring](#monitoring)
+7. [Troubleshooting](#troubleshooting)
+8. [Contact and Support](#contact-and-support)
 
 ## Change Deployment Overview
 
@@ -137,6 +138,129 @@ sudo systemctl daemon-reload
 sudo systemctl enable dashboard
 sudo systemctl start dashboard
 ```
+## Architecture Diagram
+
+### Interactive Diagram
+```mermaid
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AWS Architecture Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        body {
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        #diagram {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 100%;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="diagram">
+        <pre class="mermaid">
+        flowchart TB
+            %% Define external systems
+            subgraph EXTERNAL["External Systems"]
+                direction TB
+                Users(("Users<br/><br/>"))
+                subgraph GITHUB["GitHub"]
+                    GH["GitHub<br/>Repositories"]
+                    GHA["GitHub<br/>Actions"]
+                end
+            end
+            %% Define AWS infrastructure
+            subgraph AWS["AWS Cloud Infrastructure"]
+                direction TB
+                R53["Route 53<br/>DNS"]
+                
+                subgraph VPC["VPC Network"]
+                    direction TB
+                    subgraph PUBLIC["Public Subnet"]
+                        ALB["Application<br/>Load Balancer"]
+                        subgraph ASG["Auto Scaling Group"]
+                            EC2["EC2 Instances<br/>Ubuntu + Node.js + Python"]
+                        end
+                    end
+                    
+                    subgraph PRIVATE["Private Subnet"]
+                        RDS["RDS MySQL<br/>Build Metrics DB"]
+                    end
+                end
+                
+                subgraph SERVICES["AWS Services"]
+                    direction LR
+                    S3["S3 Bucket<br/>Backups"]
+                    CW["CloudWatch<br/>Monitoring"]
+                end
+            end
+            %% Define application components
+            subgraph APP["Application Stack"]
+                direction TB
+                FE["React Frontend<br/>Dashboard UI"]
+                BE["Flask Backend<br/>API Server"]
+                LS["Listener Script<br/>Webhook Handler"]
+            end
+            %% Define connections
+            Users -->|"HTTPS<br/>Dashboard Access"| R53
+            R53 -->|"Route Traffic"| ALB
+            GH -->|"Webhooks"| ALB
+            GHA -->|"Deploy Code"| EC2
+            
+            ALB -->|"Forward Requests"| EC2
+            EC2 -->|"Store/Query Data"| RDS
+            EC2 -->|"Log Events"| CW
+            EC2 -->|"Store Backups"| S3
+            
+            EC2 --> FE
+            EC2 --> BE
+            EC2 --> LS
+            BE -->|"Query Metrics"| RDS
+            LS -->|"Store Events"| RDS
+            %% Styling
+            classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:4px,color:black,rx:5;
+            classDef github fill:#24292E,stroke:#24292E,stroke-width:4px,color:white,rx:5;
+            classDef app fill:#3178C6,stroke:#235A97,stroke-width:4px,color:white,rx:5;
+            classDef external fill:#70B5FF,stroke:#4F8AC9,stroke-width:4px,rx:5;
+            classDef container fill:none,stroke:#999,stroke-width:2px,color:black;
+            
+            class ALB,EC2,RDS,S3,CW,R53 aws;
+            class GH,GHA github;
+            class FE,BE,LS app;
+            class Users external;
+            class AWS,VPC,PUBLIC,PRIVATE,SERVICES,EXTERNAL container;
+            %% Link styling
+            linkStyle default stroke:#333,stroke-width:2px;
+        </pre>
+    </div>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            themeVariables: {
+                background: '#ffffff'
+            }
+        });
+    </script>
+</body>
+</html>
+```
+
+### Static Diagram
+![Architecture Diagram](images/screenshot.png)
+
 ## Data Model
 
 ### Database Overview
