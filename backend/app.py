@@ -120,15 +120,18 @@ def get_workflow_runs():
         days = request.args.get('days', default=7, type=int)
         repo_filter = request.args.get('repo', default=None)
         
-        # Base query with joins to get commit messages
+        # Updated query to properly handle workflow runs and commits
         query = """
             SELECT 
-                wr.gitid as workflow_id,
+                wr.id as workflow_id,
+                wr.gitid as commit_hash,
                 wr.author,
                 wr.createtime,
                 wr.repo,
+                wr.branchname,
                 c.message as commit_message,
                 GROUP_CONCAT(
+                    DISTINCT
                     CONCAT(
                         CASE 
                             WHEN wr.os IS NOT NULL THEN wr.os
@@ -141,6 +144,7 @@ def get_workflow_runs():
                              WHEN wr.conclusion = 'failure' THEN 'X'
                              ELSE '?' END
                     )
+                    ORDER BY wr.createtime DESC
                 ) as result_data
             FROM workflowruns wr
             LEFT JOIN commits c ON wr.commithash = c.hash AND wr.repo = c.repo
@@ -153,7 +157,17 @@ def get_workflow_runs():
             query += " AND wr.repo = %s"
             params.append(repo_filter)
             
-        query += " GROUP BY wr.gitid, wr.author, wr.createtime, wr.repo, c.message ORDER BY wr.createtime DESC"
+        query += """
+            GROUP BY 
+                wr.id, 
+                wr.gitid,
+                wr.author,
+                wr.createtime,
+                wr.repo,
+                wr.branchname,
+                c.message 
+            ORDER BY wr.createtime DESC
+        """
         
         cursor.execute(query, params)
         
@@ -178,8 +192,10 @@ def get_workflow_runs():
 
             run = {
                 'workflowId': str(row['workflow_id']),
+                'commitHash': str(row['commit_hash']),
                 'createTime': row['createtime'].isoformat() if row['createtime'] else None,
                 'repo': row['repo'],
+                'branch': row['branchname'],
                 'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
                 'results': results
