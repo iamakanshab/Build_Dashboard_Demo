@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -33,8 +33,8 @@ const WaterfallView = () => {
           repo: selectedRepo === 'all' ? '' : selectedRepo
         });
         
-        console.log('Fetching from:', `${API_URL}/api/metrics/workflow-runs?${queryParams}`);
-        const response = await fetch(`${API_URL}/api/metrics/workflow-runs?${queryParams}`, {
+        console.log('Fetching from:', '/api/metrics/workflow-runs?${queryParams}');
+        const response = await fetch(`/api/metrics/workflow-runs?${queryParams}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
