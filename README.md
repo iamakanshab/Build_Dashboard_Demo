@@ -73,8 +73,6 @@ npm run dev
 4. Set up PM2 for process management
 5. Configure Nginx as reverse proxy
 
-Detailed deployment instructions can be found in the [deployment guide](./docs/deployment.md).
-
 ## Project Structure
 
 ```
