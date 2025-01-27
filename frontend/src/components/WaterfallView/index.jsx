@@ -1,8 +1,10 @@
-// components/WaterfallView.jsx
+
+// WaterfallView.jsx
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+// Hardcoded API URL
+const API_URL = 'http://localhost:5000';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -22,7 +24,7 @@ const WaterfallView = () => {
   const [filter, setFilter] = useState('');
   const [selectedRepo, setSelectedRepo] = useState('all');
 
-  const workflows = ['Linux', 'Win', 'Mac', 'ROC', 'Doc', 'Lint', 'Test'];
+  const workflows = ['Linux', 'Win', 'Mac', 'Doc', 'Lint', 'Test'];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,8 +35,8 @@ const WaterfallView = () => {
           repo: selectedRepo === 'all' ? '' : selectedRepo
         });
         
-        console.log('Fetching from:', `${API_BASE_URL}/metrics/workflow-runs?${queryParams}`);
-        const response = await fetch(`${API_BASE_URL}/metrics/workflow-runs?${queryParams}`);
+        console.log('Fetching from:', `${API_URL}/api/metrics/workflow-runs?${queryParams}`);
+        const response = await fetch(`${API_URL}/api/metrics/workflow-runs?${queryParams}`);
         console.log('Response:', response);
         
         if (!response.ok) {
@@ -48,21 +50,7 @@ const WaterfallView = () => {
           throw new Error(data.error);
         }
 
-        const transformedData = data.map(run => ({
-          time: new Date(run.createTime).toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit',
-            hour12: true 
-          }),
-          sha: run.workflowId.substring(0, 7),
-          commit: run.commitMessage,
-          repo: run.repo,
-          author: run.author,
-          deepLink: `https://github.com/${run.repo}/commit/${run.workflowId}`,
-          results: run.results
-        }));
-        
-        setWorkflowRuns(transformedData);
+        setWorkflowRuns(data);
         setError(null);
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -73,7 +61,7 @@ const WaterfallView = () => {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 300000);
+    const interval = setInterval(fetchData, 300000); // 5 minutes
     return () => clearInterval(interval);
   }, [selectedRepo]);
 
@@ -81,9 +69,9 @@ const WaterfallView = () => {
     if (!filter) return true;
     const searchTerm = filter.toLowerCase();
     return (
-      run.sha.toLowerCase().includes(searchTerm) ||
-      run.commit.toLowerCase().includes(searchTerm) ||
-      run.author.toLowerCase().includes(searchTerm)
+      run.sha?.toLowerCase().includes(searchTerm) ||
+      run.commitMessage?.toLowerCase().includes(searchTerm) ||
+      run.author?.toLowerCase().includes(searchTerm)
     );
   });
 
@@ -140,22 +128,22 @@ const WaterfallView = () => {
             </thead>
             <tbody className="bg-white">
               {filteredRuns.map((run) => (
-                <tr key={`${run.repo}-${run.sha}`} className="border-t border-gray-100">
+                <tr key={`${run.repo}-${run.workflowId}`} className="border-t border-gray-100">
                   <td className="px-2 py-1 text-gray-500 whitespace-nowrap">
-                    {run.time}
+                    {new Date(run.createTime).toLocaleTimeString()}
                   </td>
                   <td className="px-2 py-1 font-mono whitespace-nowrap">
                     <a 
-                      href={run.deepLink}
+                      href={`https://github.com/${run.repo}/commit/${run.workflowId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
                     >
-                      {run.sha}
+                      {run.workflowId.substring(0, 7)}
                     </a>
                   </td>
                   <td className="px-2 py-1">
-                    <span className="text-gray-900">{run.commit}</span>
+                    <span className="text-gray-900">{run.commitMessage}</span>
                   </td>
                   <td className="px-2 py-1 text-gray-500">
                     {run.author}
