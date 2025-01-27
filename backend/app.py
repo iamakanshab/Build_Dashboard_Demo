@@ -1,19 +1,11 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask import Flask, jsonify, request, send_from_directory
 from datetime import datetime, timedelta
 import mysql.connector
 import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-app = Flask(__name__)
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://localhost:3000"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+app = Flask(__name__, static_folder='build', static_url_path='')
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -39,13 +31,6 @@ def get_db_connection():
     except Exception as e:
         app.logger.error(f"Database connection error: {str(e)}")
         raise
-
-@app.after_request
-def after_request(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
-    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
-    return response
 
 @app.route('/api/metrics/dashboard', methods=['GET'])
 def get_dashboard_metrics():
@@ -211,8 +196,18 @@ def get_workflow_runs():
         app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+# Serve React App - root path
+@app.route('/')
+def serve():
+    return send_from_directory(app.static_folder, 'index.html')
+
+# Catch all routes to handle React Router
+@app.route('/<path:path>')
+def static_proxy(path):
+    return send_from_directory(app.static_folder, path)
+
 if __name__ == '__main__':
     app.logger.info("Starting Flask application...")
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.getenv('PORT', 80))
     debug = os.getenv('FLASK_ENV') == 'development'
     app.run(host='0.0.0.0', port=port, debug=debug)

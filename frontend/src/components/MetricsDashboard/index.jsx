@@ -4,8 +4,8 @@ import { Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
 
-// Hardcoded API URL for testing
-const API_URL = 'http://localhost:5000';
+// REMOVED API URL for testing
+// const API_URL = 'http://localhost:5000';
 
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
   <Card>
@@ -25,12 +25,10 @@ const MetricsDashboard = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
 const fetchDashboardData = async () => {
     try {
-      console.log('Fetching metrics from:', `${API_URL}/api/metrics/dashboard`);
-      const response = await fetch(`${API_URL}/api/metrics/dashboard`);
+      console.log('Fetching metrics from:', '/api/metrics/dashboard');
+      const response = await fetch('/api/metrics/dashboard');
       console.log('Response:', response);
       
       if (!response.ok) {
