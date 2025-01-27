@@ -1,22 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 const MetricCard = ({ title, value, isRed, subtitle, size = 'default' }) => (
-  <Card className="hover:shadow-lg transition-shadow">
-    <CardContent className="pt-6">
-      <div className="text-sm font-medium text-gray-500">{title}</div>
-      <div className={`mt-2 ${size === 'large' ? 'text-4xl' : 'text-3xl'} font-semibold ${
-        isRed ? 'text-red-500' : 'text-gray-900'
-      }`}>
-        {value}
-      </div>
-      {subtitle && <div className="mt-1 text-sm text-gray-600">{subtitle}</div>}
-    </CardContent>
-  </Card>
+  <div className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-shadow p-6">
+    <div className="text-sm font-medium text-gray-500">{title}</div>
+    <div className={`mt-2 ${size === 'large' ? 'text-4xl' : 'text-3xl'} font-semibold ${
+      isRed ? 'text-red-500' : 'text-gray-900'
+    }`}>
+      {value}
+    </div>
+    {subtitle && <div className="mt-1 text-sm text-gray-600">{subtitle}</div>}
+  </div>
 );
 
 const MetricsDashboard = () => {
@@ -54,7 +49,7 @@ const MetricsDashboard = () => {
   if (loading && !data) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
       </div>
     );
   }
@@ -62,9 +57,9 @@ const MetricsDashboard = () => {
   if (error) {
     return (
       <div className="p-6">
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
+          {error}
+        </div>
       </div>
     );
   }
@@ -99,7 +94,7 @@ const MetricsDashboard = () => {
         <h1 className="text-2xl font-bold">PyTorch CI Metrics</h1>
         <div className="flex gap-4">
           <select 
-            className="px-3 py-2 border rounded-md"
+            className="px-3 py-2 border rounded-md bg-white"
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
           >
@@ -107,10 +102,15 @@ const MetricsDashboard = () => {
             <option value="14d">Last 14 Days</option>
             <option value="30d">Last 30 Days</option>
           </select>
-          <Button onClick={fetchDashboardData} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <button 
+            onClick={fetchDashboardData}
+            className="px-4 py-2 border rounded-md hover:bg-gray-50 flex items-center gap-2"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
             Refresh
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -139,48 +139,40 @@ const MetricsDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Commits red on main, by day</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activeData.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Success" stackId="a" fill="#4ade80" name="Success" />
-                  <Bar dataKey="Failed" stackId="a" fill="#f87171" name="Failed" />
-                  <Bar dataKey="Flaky" stackId="a" fill="#fbbf24" name="Flaky" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold mb-4">Commits red on main, by day</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activeData.chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Success" stackId="a" fill="#4ade80" name="Success" />
+                <Bar dataKey="Failed" stackId="a" fill="#f87171" name="Failed" />
+                <Bar dataKey="Flaky" stackId="a" fill="#fbbf24" name="Flaky" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Time Metrics Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={activeData.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="Success" stroke="#4ade80" />
-                  <Line type="monotone" dataKey="Failed" stroke="#f87171" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-lg font-semibold mb-4">Time Metrics Trend</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={activeData.chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="Success" stroke="#4ade80" />
+                <Line type="monotone" dataKey="Failed" stroke="#f87171" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
