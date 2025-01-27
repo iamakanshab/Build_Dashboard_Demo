@@ -21,7 +21,7 @@ sudo apt-get update
 sudo apt-get install -y python3-pip git nodejs npm
 ```
 
-### Node.js Setup (if needed)
+### Node.js Setup 
 ```bash
 # Install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
