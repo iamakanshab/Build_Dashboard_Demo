@@ -1,7 +1,7 @@
 # Build Dashboard Deployment Guide
 
 ## System Overview
-The Build Dashboard system provides comprehensive monitoring across multiple repositories through three specialized views: a high-level waterfall view for quick status assessment, a detailed triage view for debugging, and a developer-focused view for tracking individual metrics and code reviews. The platform delivers real-time updates through Webhooks, enabling immediate visibility into build statuses, force merges, and critical events. 
+The Build Dashboard system provides comprehensive monitoring across multiple repositories through two specialized views: a high-level waterfall view for quick status assessment, and a developer-focused view for tracking individual metrics and code reviews. The platform delivers real-time updates through Webhooks, enabling immediate visibility into build statuses, force merges, and critical events. 
 
 Users can configure repository-specific settings and customize metric collections while receiving automated alerts for threshold breaches in build failures, queue times, and infrastructure health. The system integrates deeply with GitHub and CI systems to collect, process, and analyze build performance data, offering trending analysis and historical reporting capabilities that help teams maintain optimal build system health and development workflow efficiency.
 
