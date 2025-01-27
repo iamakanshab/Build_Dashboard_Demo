@@ -15,9 +15,10 @@ Users can configure repository-specific settings and customize metric collection
    - [Application Setup](#2-application-setup)
    - [Database Configuration](#3-configure-database)
    - [Service Setup](#4-setup-service)
-4. [Monitoring](#monitoring)
-5. [Troubleshooting](#troubleshooting)
-6. [Contact and Support](#contact-and-support)
+4. [Data Model](#data-model)
+5. [Monitoring](#monitoring)
+6. [Troubleshooting](#troubleshooting)
+7. [Contact and Support](#contact-and-support)
 
 ## Change Deployment Overview
 
@@ -136,6 +137,91 @@ sudo systemctl daemon-reload
 sudo systemctl enable dashboard
 sudo systemctl start dashboard
 ```
+## Data Model
+
+### Database Overview
+The Build Dashboard uses a MySQL database (shark_dashboard_db) to track GitHub workflows, repositories, commits, and branches. The schema is designed to efficiently capture CI/CD metrics and relationships between different GitHub entities.
+
+### Schema Design
+
+#### Repositories (repos)
+```sql
+CREATE TABLE repos (
+    Id    int          PRIMARY KEY AUTO_INCREMENT,
+    name  varchar(50)  UNIQUE
+);
+```
+The `repos` table serves as the central reference for all repositories being monitored.
+
+#### Workflows
+```sql
+CREATE TABLE workflows (
+    Id    int           PRIMARY KEY AUTO_INCREMENT,
+    name  varchar(50)   UNIQUE NOT NULL,
+    url   varchar(100)  NOT NULL,
+    repo  varchar(50)   NOT NULL
+);
+```
+Tracks GitHub workflow definitions within each repository.
+
+#### Workflow Runs (workflowruns)
+```sql
+CREATE TABLE workflowruns (
+    Id           int           PRIMARY KEY AUTO_INCREMENT,
+    gitid        bigint       UNIQUE NOT NULL,
+    author       varchar(50),
+    runtime      float,
+    createtime   datetime,
+    starttime    datetime,
+    endtime      datetime,
+    queuetime    bigint       DEFAULT 0,
+    status       varchar(50),
+    conclusion   varchar(50),
+    url          varchar(100),
+    branchname   varchar(100),
+    commithash   varchar(100),
+    workflowname varchar(50),
+    repo         varchar(50)  NOT NULL,
+    os           varchar(100)
+);
+```
+The central table tracking execution metrics for each workflow run.
+
+#### Branches
+```sql
+CREATE TABLE branches (
+    Id     int          PRIMARY KEY AUTO_INCREMENT,
+    name   varchar(50)  UNIQUE NOT NULL,
+    author varchar(50),
+    repo   varchar(50)  NOT NULL
+);
+```
+Tracks active branches across repositories.
+
+#### Commits
+```sql
+CREATE TABLE commits (
+    Id      int           PRIMARY KEY AUTO_INCREMENT,
+    hash    varchar(100)  UNIQUE NOT NULL,
+    author  varchar(50),
+    message text,
+    time    datetime,
+    repo    varchar(50)  NOT NULL
+);
+```
+Records commit history and metadata.
+
+### Key Relationships
+- Each workflow run is associated with a specific repository through the `repo` field
+- Workflow runs link to specific commits via `commithash`
+- Branches are tied to repositories through the `repo` field
+- Commits are connected to their repositories via the `repo` field
+
+### Data Flow
+1. GitHub webhooks trigger updates to the database
+2. The listener script processes webhook payloads and updates relevant tables
+3. The Flask backend queries this data to power the dashboard views
+4. The frontend visualizes the data through various views (waterfall, triage, developer)
 
 ## Monitoring
 
@@ -173,7 +259,7 @@ tail -f /home/ubuntu/app/Build_Dashboard_Demo/backend/app.log
    ```
 
 ## Contact and Support
-- GitHub Issues: [Repository Issues Page]
+- GitHub Issues: [Repository Issues Page] 
 - Email: [Support Email] aig-infra@amd.com [email alias]
 - Documentation: [Wiki/Docs Link] https://confluence.amd.com/display/SHARK/Build+Metrics+Dashboard
   
