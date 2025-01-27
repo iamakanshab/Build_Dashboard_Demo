@@ -25,7 +25,9 @@ const MetricsDashboard = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchDashboardData = async () => {
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const fetchDashboardData = async () => {
     try {
       console.log('Fetching metrics from:', `${API_URL}/api/metrics/dashboard`);
       const response = await fetch(`${API_URL}/api/metrics/dashboard`);

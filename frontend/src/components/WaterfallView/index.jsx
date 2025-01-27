@@ -1,10 +1,8 @@
-
-// WaterfallView.jsx
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
 
-// Hardcoded API URL
-const API_URL = 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const StatusIcon = ({ status }) => {
   switch (status) {
@@ -36,8 +34,13 @@ const WaterfallView = () => {
         });
         
         console.log('Fetching from:', `${API_URL}/api/metrics/workflow-runs?${queryParams}`);
-        const response = await fetch(`${API_URL}/api/metrics/workflow-runs?${queryParams}`);
-        console.log('Response:', response);
+        const response = await fetch(`${API_URL}/api/metrics/workflow-runs?${queryParams}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -69,11 +72,29 @@ const WaterfallView = () => {
     if (!filter) return true;
     const searchTerm = filter.toLowerCase();
     return (
-      run.sha?.toLowerCase().includes(searchTerm) ||
-      run.commitMessage?.toLowerCase().includes(searchTerm) ||
-      run.author?.toLowerCase().includes(searchTerm)
+      run.workflowId.toLowerCase().includes(searchTerm) ||
+      run.commitMessage.toLowerCase().includes(searchTerm) ||
+      run.author.toLowerCase().includes(searchTerm)
     );
   });
+
+  if (loading && workflowRuns.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertDescription>Error: {error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
@@ -100,65 +121,53 @@ const WaterfallView = () => {
         </div>
       </div>
 
-      {error && (
-        <div className="text-red-500 mb-4 p-4 border border-red-300 rounded bg-red-50">
-          Error: {error}
-        </div>
-      )}
-
-      {loading && workflowRuns.length === 0 ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : (
-        <div className="overflow-x-auto border rounded">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-2 py-1 text-left font-medium">Time</th>
-                <th className="px-2 py-1 text-left font-medium">SHA</th>
-                <th className="px-2 py-1 text-left font-medium">Commit</th>
-                <th className="px-2 py-1 text-left font-medium">Author</th>
+      <div className="overflow-x-auto border rounded">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-2 py-1 text-left font-medium">Time</th>
+              <th className="px-2 py-1 text-left font-medium">SHA</th>
+              <th className="px-2 py-1 text-left font-medium">Commit</th>
+              <th className="px-2 py-1 text-left font-medium">Author</th>
+              {workflows.map(workflow => (
+                <th key={workflow} className="px-1 py-1 text-center font-medium">
+                  {workflow}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white">
+            {filteredRuns.map((run) => (
+              <tr key={`${run.repo}-${run.workflowId}`} className="border-t border-gray-100">
+                <td className="px-2 py-1 text-gray-500 whitespace-nowrap">
+                  {new Date(run.createTime).toLocaleTimeString()}
+                </td>
+                <td className="px-2 py-1 font-mono whitespace-nowrap">
+                  <a 
+                    href={`https://github.com/${run.repo}/commit/${run.workflowId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {run.workflowId.substring(0, 7)}
+                  </a>
+                </td>
+                <td className="px-2 py-1">
+                  <span className="text-gray-900">{run.commitMessage}</span>
+                </td>
+                <td className="px-2 py-1 text-gray-500">
+                  {run.author}
+                </td>
                 {workflows.map(workflow => (
-                  <th key={workflow} className="px-1 py-1 text-center font-medium">
-                    {workflow}
-                  </th>
+                  <td key={workflow} className="px-1 py-1 text-center">
+                    <StatusIcon status={run.results[workflow]} />
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody className="bg-white">
-              {filteredRuns.map((run) => (
-                <tr key={`${run.repo}-${run.workflowId}`} className="border-t border-gray-100">
-                  <td className="px-2 py-1 text-gray-500 whitespace-nowrap">
-                    {new Date(run.createTime).toLocaleTimeString()}
-                  </td>
-                  <td className="px-2 py-1 font-mono whitespace-nowrap">
-                    <a 
-                      href={`https://github.com/${run.repo}/commit/${run.workflowId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {run.workflowId.substring(0, 7)}
-                    </a>
-                  </td>
-                  <td className="px-2 py-1">
-                    <span className="text-gray-900">{run.commitMessage}</span>
-                  </td>
-                  <td className="px-2 py-1 text-gray-500">
-                    {run.author}
-                  </td>
-                  {workflows.map(workflow => (
-                    <td key={workflow} className="px-1 py-1 text-center">
-                      <StatusIcon status={run.results[workflow]} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
