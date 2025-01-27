@@ -1,5 +1,4 @@
-﻿// src/App.js
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import WaterfallView from './components/WaterfallView';
 import MetricsDashboard from './components/MetricsDashboard';
 
