@@ -1,11 +1,10 @@
-// MetricsDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Alert, AlertDescription } from '../ui/alert';
 
-// Hardcoded API URL
+// Hardcoded API URL for testing
 const API_URL = 'http://localhost:5000';
 
 const MetricCard = ({ title, value, isRed, size = 'default' }) => (
