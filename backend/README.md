@@ -48,6 +48,7 @@ The database has the folliwing schema
 | message | text         | YES  |     | NULL    |                |
 | time    | datetime     | YES  |     | NULL    |                |
 | repo    | varchar(50)  | NO   |     | NULL    |                |
+| forced  | boolean      | YES  |     | NULL    |                |
 +---------+--------------+------+-----+---------+----------------+
 ```
 
