@@ -88,6 +88,7 @@ class Dashboard:
         pusher = data.get("pusher", {}).get("name")
         for commit in data.get("commits", []):
             commit_hash = commit.get("id")
+            commit_forced = data.get("forced")
             try:
                 author = data.get("pusher", {}).get("name")
                 commit_time = data.get("head_commit", {}).get("timestamp")
@@ -98,15 +99,16 @@ class Dashboard:
             message = commit.get("message")
             c.execute(
                 """
-                INSERT INTO commits (hash, author, message, time, repo)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO commits (hash, author, message, time, repo, forced)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE 
                     author = VALUES(author),
                     message = VALUES(message),
                     time = VALUES(time),
-                    repo = VALUES(repo);
+                    repo = VALUES(repo),
+                    forced = forced;
                 """,
-                (commit_hash, author, message, commit_time, self.repo_path),
+                (commit_hash, author, message, commit_time, self.repo_path, commit_forced),
             )
         conn.commit()
         conn.close()
