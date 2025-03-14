@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 
+// Remove hardcoded API_URL since we're using relative paths
 // const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const StatusIcon = ({ status }) => {
@@ -31,9 +32,11 @@ const WaterfallView = () => {
         const queryParams = new URLSearchParams({
           days: '7',
           repo: selectedRepo === 'all' ? '' : selectedRepo
-        });
+        }).toString();
         
-        console.log('Fetching from:', '/api/metrics/workflow-runs?${queryParams}');
+        // Fixed template string
+        console.log('Fetching from:', `/api/metrics/workflow-runs?${queryParams}`);
+        
         const response = await fetch(`/api/metrics/workflow-runs?${queryParams}`, {
           method: 'GET',
           headers: {
@@ -144,12 +147,12 @@ const WaterfallView = () => {
                 </td>
                 <td className="px-2 py-1 font-mono whitespace-nowrap">
                   <a 
-                    href={`https://github.com/${run.repo}/commit/${run.workflowId}`}
+                    href={`https://github.com/${run.repo}/commit/${run.commitHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline"
                   >
-                    {run.workflowId.substring(0, 7)}
+                    {run.commitHash.substring(0, 7)}
                   </a>
                 </td>
                 <td className="px-2 py-1">
