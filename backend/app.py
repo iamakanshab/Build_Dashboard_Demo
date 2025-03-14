@@ -212,6 +212,110 @@ def get_workflow_runs():
         app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/test-db')
+def test_db():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Check total count of workflowruns
+        cursor.execute("SELECT COUNT(*) as total FROM workflowruns")
+        count_result = cursor.fetchone()
+        
+        # Check the most recent records
+        cursor.execute("SELECT id, gitid, author, createtime, repo FROM workflowruns ORDER BY createtime DESC LIMIT 5")
+        sample_data = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "status": "connected",
+            "total_records": count_result['total'],
+            "sample_data": sample_data
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    
+@app.route('/api/test-simple-query')
+def test_simple_query():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Simpler query without complex joins or GROUP BY
+        cursor.execute("""
+            SELECT 
+                id, gitid, author, createtime, repo, branchname, workflowname
+            FROM workflowruns
+            WHERE createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            LIMIT 10
+        """)
+        
+        results = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        app.logger.info(f"Simple query returned {len(results)} rows")
+        return jsonify(results)
+    except Exception as e:
+        app.logger.error(f"Simple query error: {str(e)}")
+        return jsonify({"error": str(e)})
+
+@app.route('/api/test-dates')
+def test_dates():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get the server's current time
+        cursor.execute("SELECT NOW() as server_time")
+        server_time = cursor.fetchone()
+        
+        # Get min and max dates in the workflowruns table
+        cursor.execute("SELECT MIN(createtime) as min_date, MAX(createtime) as max_date FROM workflowruns")
+        date_range = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        # Include Python's datetime for comparison
+        from datetime import datetime
+        python_now = datetime.now()
+        
+        return jsonify({
+            "server_time": server_time['server_time'].isoformat() if server_time else None,
+            "python_time": python_now.isoformat(),
+            "min_date": date_range['min_date'].isoformat() if date_range and date_range['min_date'] else None,
+            "max_date": date_range['max_date'].isoformat() if date_range and date_range['max_date'] else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/api/db-schema')
+def db_schema():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get column information for workflowruns table
+        cursor.execute("""
+            SELECT COLUMN_NAME, DATA_TYPE 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_NAME = 'workflowruns'
+            AND TABLE_SCHEMA = 'shark_dashboard_db'
+        """)
+        
+        columns = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify(columns)
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    
 # Serve React App - root path
 @app.route('/')
 def serve():
