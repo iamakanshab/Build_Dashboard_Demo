@@ -39,16 +39,18 @@ The database has the folliwing schema
 
 ### commits
 ```
-+---------+--------------+------+-----+---------+----------------+
-| Field   | Type         | Null | Key | Default | Extra          |
-+---------+--------------+------+-----+---------+----------------+
-| Id      | int          | NO   | PRI | NULL    | auto_increment |
-| hash    | varchar(100) | NO   | UNI | NULL    |                |
-| author  | varchar(50)  | YES  |     | NULL    |                |
-| message | text         | YES  |     | NULL    |                |
-| time    | datetime     | YES  |     | NULL    |                |
-| repo    | varchar(50)  | NO   |     | NULL    |                |
-+---------+--------------+------+-----+---------+----------------+
++-----------+--------------+------+-----+---------+----------------+
+| Field     | Type         | Null | Key | Default | Extra          |
++-----------+--------------+------+-----+---------+----------------+
+| Id        | int          | NO   | PRI | NULL    | auto_increment |
+| hash      | varchar(100) | NO   | UNI | NULL    |                |
+| author    | varchar(50)  | YES  |     | NULL    |                |
+| message   | text         | YES  |     | NULL    |                |
+| time      | datetime     | YES  |     | NULL    |                |
+| repo      | varchar(50)  | NO   |     | NULL    |                |
+| forced    | boolean      | YES  |     | NULL    |                |
+| authorurl | varchar(100) | YES  |     | NULL    |                |
++-----------+--------------+------+-----+---------+----------------+
 ```
 
 ### workflows
