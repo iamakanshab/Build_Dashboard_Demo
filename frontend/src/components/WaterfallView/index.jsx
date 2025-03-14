@@ -35,9 +35,9 @@ const WaterfallView = () => {
         }).toString();
         
         // Fixed template string
-        console.log('Fetching from:', `/api/metrics/workflow-runs?${queryParams}`);
+        console.log('Fetching from:', `/api/metrics/workflowruns?${queryParams}`);
         
-        const response = await fetch(`/api/metrics/workflow-runs?${queryParams}`, {
+        const response = await fetch(`/api/metrics/workflowruns?${queryParams}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
