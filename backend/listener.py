@@ -8,6 +8,8 @@ import pickle
 import os
 import argparse
 from sqlauthenticator import connector
+import json
+
 
 class Dashboard:
 
@@ -24,7 +26,7 @@ class Dashboard:
         self.port = port
 
     def start(self):
-        self.app.run(host='0.0.0.0', port=self.port, debug=True)
+        self.app.run(host="0.0.0.0", port=self.port, debug=True)
 
     def stop(self):
         pass
@@ -57,13 +59,15 @@ class Dashboard:
         return "", 200
 
     def add_initial_queue_time(self, data):
-        start_time = datetime.datetime.fromisoformat(data.get("workflow_job", {}).get("started_at").replace("Z", ""))
+        start_time = datetime.datetime.fromisoformat(
+            data.get("workflow_job", {}).get("started_at").replace("Z", "")
+        )
         run_id = data.get("workflow_job", {}).get("run_id")
         conn = connector(self.password)
         c = conn.cursor()
         c.execute("USE shark_dashboard_db")
         c.execute(
-        """
+            """
         UPDATE workflowruns
         SET 
             starttime = %s,
@@ -72,11 +76,10 @@ class Dashboard:
             gitid = %s 
             AND queuetime = 0.0;
         """,
-        (start_time, start_time, run_id)
+            (start_time, start_time, run_id),
         )
         conn.commit()
         conn.close()
-
 
     def add_commit(self, data):
         conn = connector(self.password)
@@ -87,24 +90,36 @@ class Dashboard:
         pusher = data.get("pusher", {}).get("name")
         for commit in data.get("commits", []):
             commit_hash = commit.get("id")
+            commit_forced = data.get("forced")
             try:
-                author = data.get("author", {}).get("name")
-                commit_time = data.get("author, {}").get("date")
+                author = data.get("pusher", {}).get("name")
+                commit_time = data.get("head_commit", {}).get("timestamp")
             except:
-                print(f"No Author found for {commit_hashj}")
+                print(f"No Author found for {commit_hash}")
+                commit_time = None
+                author = None
             message = commit.get("message")
-            commit_time = time.mktime(commit_time.timetuple())
             c.execute(
                 """
-                INSERT INTO commits (hash, author, message, time, repo)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO commits (hash, author, message, time, repo, forced, authorurl)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE 
                     author = VALUES(author),
                     message = VALUES(message),
                     time = VALUES(time),
-                    repo = VALUES(repo);
+                    repo = VALUES(repo),
+                    forced = forced,
+                    authorurl = VALUES(authorurl);
                 """,
-                (commit_hash, author, message, self.repo_path),
+                (
+                    commit_hash,
+                    author,
+                    message,
+                    commit_time,
+                    self.repo_path,
+                    commit_forced,
+                    "https://github.com/" + author,
+                ),
             )
         conn.commit()
         conn.close()
@@ -185,7 +200,7 @@ class Dashboard:
                 branch_name,
                 commit_hash,
                 workflow_name,
-                self.repo_path
+                self.repo_path,
             ),
         )
         conn.commit()
@@ -193,17 +208,16 @@ class Dashboard:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="Backend-Listener",
-                                     description="starts the listener to live update the database")
-    parser.add_argument('-r', '--repo', help="repository to scrape data from")
-    parser.add_argument('-k', "--key", help="repository key")
-    parser.add_argument('-p', "--port", help="port to expose", default=5000)
-    parser.add_argument('-pwd', '--password', help="Password to remote database")
-    args = parser.parse_args()
-    dashboard = Dashboard(
-        args.key,
-        args.repo,
-        args.password,
-        args.port
+    parser = argparse.ArgumentParser(
+        prog="Backend-Listener",
+        description="starts the listener to live update the database",
     )
+    parser.add_argument("-r", "--repo", help="repository to scrape data from")
+    parser.add_argument("-k", "--key", help="repository key")
+    parser.add_argument("-p", "--port", help="port to expose", default=5000)
+    parser.add_argument(
+        "-pwd", "--password", help="Password to remote database"
+    )
+    args = parser.parse_args()
+    dashboard = Dashboard(args.key, args.repo, args.password, args.port)
     dashboard.start()
