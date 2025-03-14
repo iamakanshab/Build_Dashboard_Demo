@@ -111,7 +111,7 @@ def get_dashboard_metrics():
         app.logger.error(f"Dashboard metrics error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/metrics/workflow-runs', methods=['GET'])
+@app.route('/api/metrics/workflowruns', methods=['GET'])
 def get_workflow_runs():
     try:
         conn = get_db_connection()
