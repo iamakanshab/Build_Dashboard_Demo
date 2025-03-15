@@ -147,7 +147,7 @@ def get_workflow_runs():
             query += " AND wr.repo = %s"
             params.append(repo_filter)
         
-        if branch_filter:
+        if branch_filter and branch_filter != 'all':
             query += " AND wr.branchname = %s"
             params.append(branch_filter)
             
@@ -211,7 +211,31 @@ def get_workflow_runs():
     except Exception as e:
         app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
+    
+@app.route('/api/metrics/repos')
+def get_repos():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        query = "SELECT Id, name FROM repos ORDER BY name"
+        cursor.execute(query)
+        
+        repos = []
+        for row in cursor.fetchall():
+            repos.append({
+                'id': row['Id'],
+                'name': row['name']
+            })
+            
+        cursor.close()
+        conn.close()
+        
+        return jsonify(repos)
+    except Exception as e:
+        app.logger.error(f"Error getting repos: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+       
 @app.route('/api/db-schema')
 def db_schema():
     try:
