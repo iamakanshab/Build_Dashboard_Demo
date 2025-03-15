@@ -5,17 +5,17 @@ import { Alert, AlertDescription } from '../ui/alert';
 // Repository-specific workflow configurations
 const REPO_WORKFLOWS = {
   'iree-org/iree': [
-    { id: 'ci', display: 'CI', description: 'Main CI workflow (ci.yml)' },
-    { id: 'pkgci', display: 'Pkg', description: 'Package CI workflow (pkgci.yml)' },
-    { id: 'website', display: 'Web', description: 'Website publishing (publish_website.yml)' },
-    { id: 'arm64', display: 'ARM64', description: 'Linux ARM64 CI (ci_linux_arm64_clang.yml)' },
-    { id: 'macos-x64', display: 'Mac x64', description: 'macOS x64 CI (ci_macos_x64_clang.yml)' },
-    { id: 'macos-arm', display: 'Mac ARM', description: 'macOS ARM64 CI (ci_macos_arm64_clang.yml)' },
-    { id: 'win-x64', display: 'Win x64', description: 'Windows x64 CI (ci_windows_x64_msvc.yml)' },
-    { id: 'byollvm', display: 'LLVM', description: 'Linux BYOLLVM CI (ci_linux_x64_clang_byollvm.yml)' },
-    { id: 'debug', display: 'Debug', description: 'Linux Debug CI (ci_linux_x64_clang_debug.yml)' },
-    { id: 'tsan', display: 'TSAN', description: 'Linux TSAN CI (ci_linux_x64_clang_tsan.yml)' },
-    { id: 'gcc', display: 'GCC', description: 'Linux GCC CI (ci_linux_x64_gcc.yml)' }
+    { id: 'CI', display: 'CI', description: 'CI workflow' },
+    { id: 'PkgCI', display: 'Pkg', description: 'Package CI workflow' },
+    { id: 'Publish Website', display: 'Web', description: 'Website publishing' },
+    { id: 'Linux', display: 'Linux', description: 'Linux CI' },
+    { id: 'Mac', display: 'Mac x64', description: 'macOS x64 CI' },
+    { id: 'ARM64', display: 'ARM64', description: 'Linux ARM64 CI' },
+    { id: 'Windows', display: 'Win x64', description: 'Windows x64 CI' },
+    { id: 'LLVM', display: 'LLVM', description: 'Linux BYOLLVM CI' },
+    { id: 'Debug', display: 'Debug', description: 'Linux Debug CI' },
+    { id: 'TSAN', display: 'TSAN', description: 'Linux TSAN CI' },
+    { id: 'GCC', display: 'GCC', description: 'Linux GCC CI' }
   ],
   'nod-ai/shark-ai': [
     { id: 'shortfin', display: 'Shortfin', description: 'Shortfin CI workflow' },
@@ -26,8 +26,8 @@ const REPO_WORKFLOWS = {
 
 // Default workflows when no specific repo is selected
 const DEFAULT_WORKFLOWS = [
-  { id: 'ci', display: 'CI', description: 'Main CI workflow' },
-  { id: 'pkg', display: 'Pkg', description: 'Package workflow' }
+  { id: 'CI', display: 'CI', description: 'Main CI workflow' },
+  { id: 'Pkg', display: 'Pkg', description: 'Package workflow' }
 ];
 
 const StatusIcon = ({ status, url }) => {
@@ -91,7 +91,7 @@ const WaterfallView = () => {
       try {
         setLoading(true);
         const queryParams = new URLSearchParams({
-          days: '7',
+          days: '14', // Increased to 14 days to get more results
           repo: selectedRepo === 'all' ? '' : selectedRepo,
           branch: selectedBranch
         }).toString();
@@ -124,42 +124,74 @@ const WaterfallView = () => {
             commitGroups[run.commitHash] = {
               ...run,
               allRuns: [],  // Store all runs for this commit
-              // Initialize an object to store the "best" result for each workflow type
-              workflowResults: workflows.reduce((acc, workflow) => {
-                acc[workflow.id] = { status: '?', url: null };
-                return acc;
-              }, {})
+              workflowResults: {}  // Store results for each workflow type
             };
+            
+            // Initialize workflow results
+            workflows.forEach(workflow => {
+              commitGroups[run.commitHash].workflowResults[workflow.id] = { 
+                status: '?', 
+                url: null 
+              };
+            });
           }
           
           // Add this run to the commit's run collection
           commitGroups[run.commitHash].allRuns.push(run);
           
-          // Update workflow statuses based on this run
-          // This is a simplified example - you'd need to map your actual workflow names to these IDs
-          Object.keys(run.results).forEach(key => {
-            const workflowId = key.toLowerCase();
-            const relevantWorkflow = workflows.find(w => 
-              workflowId.includes(w.id.toLowerCase())
-            );
+          // Direct mapping from workflow name
+          if (run.workflowname) {
+            const workflowId = run.workflowname;
+            const exactWorkflow = workflows.find(w => w.id === workflowId);
             
-            if (relevantWorkflow) {
-              const currentStatus = commitGroups[run.commitHash].workflowResults[relevantWorkflow.id].status;
-              // Prioritize actual results over unknown status
-              if (run.results[key] !== '?' || currentStatus === '?') {
-                commitGroups[run.commitHash].workflowResults[relevantWorkflow.id] = { 
-                  status: run.results[key],
+            if (exactWorkflow) {
+              commitGroups[run.commitHash].workflowResults[exactWorkflow.id] = { 
+                status: run.conclusion === 'success' ? 'O' : (run.conclusion === 'failure' ? 'X' : '?'),
+                url: run.workflowUrl
+              };
+            }
+          }
+          
+          // Also map OS-specific results
+          if (run.os) {
+            // Handle OS mappings
+            let osKey = run.os;
+            if (osKey.toLowerCase() === 'windows') {
+              osKey = 'Windows';
+            } else if (osKey.toLowerCase() === 'macos') {
+              osKey = 'Mac';
+            }
+            
+            const osWorkflow = workflows.find(w => w.id === osKey);
+            if (osWorkflow) {
+              commitGroups[run.commitHash].workflowResults[osWorkflow.id] = { 
+                status: run.conclusion === 'success' ? 'O' : (run.conclusion === 'failure' ? 'X' : '?'),
+                url: run.workflowUrl
+              };
+            }
+          }
+          
+          // Also directly map results from the 'results' object if present
+          if (run.results) {
+            Object.entries(run.results).forEach(([key, value]) => {
+              const resultWorkflow = workflows.find(w => w.id === key);
+              if (resultWorkflow && value !== '?') {
+                commitGroups[run.commitHash].workflowResults[resultWorkflow.id] = { 
+                  status: value,
                   url: run.workflowUrl
                 };
               }
-            }
-          });
+            });
+          }
         });
 
-        // Convert back to array for display
-        const groupedData = Object.values(commitGroups);
+        // Convert back to array for display and sort by createTime
+        const groupedData = Object.values(commitGroups)
+          .sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+          
         setWorkflowRuns(groupedData);
         setError(null);
+        console.log('Processed data:', groupedData);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err.message);
@@ -185,7 +217,7 @@ const WaterfallView = () => {
     );
   });
 
-  const branches = ['main', 'master', 'develop'];
+  const branches = ['main']; // Only show main branch
 
   if (loading && workflowRuns.length === 0) {
     return (

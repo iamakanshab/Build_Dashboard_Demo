@@ -119,36 +119,23 @@ def get_workflow_runs():
         
         days = request.args.get('days', default=7, type=int)
         repo_filter = request.args.get('repo', default=None)
-        branch_filter = request.args.get('branch', default='main', type=str)  # Add branch filter
+        branch_filter = request.args.get('branch', default='main', type=str)
         
         # Updated query to properly handle workflow runs and commits
         query = """
             SELECT 
                 wr.id as workflow_id,
                 wr.gitid,
-                wr.commithash,  # This is what we need for the commit hash
+                wr.commithash,
                 wr.author,
                 wr.createtime,
                 wr.repo,
                 wr.branchname,
+                wr.workflowname,
+                wr.os,
+                wr.conclusion,
                 wr.url as workflow_url,
-                c.message as commit_message,
-                GROUP_CONCAT(
-                    DISTINCT
-                    CONCAT(
-                        CASE 
-                            WHEN wr.os IS NOT NULL THEN wr.os
-                            WHEN wr.workflowname LIKE '%doc%' THEN 'Doc'
-                            WHEN wr.workflowname LIKE '%lint%' THEN 'Lint'
-                            WHEN wr.workflowname LIKE '%test%' THEN 'Test'
-                        END,
-                        ':',
-                        CASE WHEN wr.conclusion = 'success' THEN 'O'
-                             WHEN wr.conclusion = 'failure' THEN 'X'
-                             ELSE '?' END
-                    )
-                    ORDER BY wr.createtime DESC
-                ) as result_data
+                c.message as commit_message
             FROM workflowruns wr
             LEFT JOIN commits c ON wr.commithash = c.hash AND wr.repo = c.repo
             WHERE wr.createtime >= DATE_SUB(NOW(), INTERVAL %s DAY)
@@ -165,16 +152,6 @@ def get_workflow_runs():
             params.append(branch_filter)
             
         query += """
-            GROUP BY 
-                wr.id, 
-                wr.gitid,
-                wr.commithash,
-                wr.author,
-                wr.createtime,
-                wr.repo,
-                wr.branchname,
-                wr.url,
-                c.message 
             ORDER BY wr.createtime DESC
         """
         
@@ -184,31 +161,43 @@ def get_workflow_runs():
         for row in cursor.fetchall():
             # Initialize default results
             results = {
-                'Linux': '?', 'Win': '?', 'Mac': '?',
+                'Linux': '?', 'Win': '?', 'Mac': '?', 
                 'Doc': '?', 'Lint': '?', 'Test': '?'
             }
             
             # Parse concatenated results
-            if row['result_data']:
-                for result in row['result_data'].split(','):
-                    key, value = result.split(':')
-                    if key.lower() == 'windows':
-                        key = 'Win'
-                    elif key.lower() == 'macos':
-                        key = 'Mac'
-                    if key in results:
-                        results[key] = value
+            if row['os']:
+                key = row['os']
+                if key.lower() == 'windows':
+                    key = 'Win'
+                elif key.lower() == 'macos':
+                    key = 'Mac'
+                
+                if key in results:
+                    results[key] = 'O' if row['conclusion'] == 'success' else ('X' if row['conclusion'] == 'failure' else '?')
+            
+            # Also check for special workflow types
+            if row['workflowname']:
+                if 'doc' in row['workflowname'].lower():
+                    results['Doc'] = 'O' if row['conclusion'] == 'success' else ('X' if row['conclusion'] == 'failure' else '?')
+                elif 'lint' in row['workflowname'].lower():
+                    results['Lint'] = 'O' if row['conclusion'] == 'success' else ('X' if row['conclusion'] == 'failure' else '?')
+                elif 'test' in row['workflowname'].lower():
+                    results['Test'] = 'O' if row['conclusion'] == 'success' else ('X' if row['conclusion'] == 'failure' else '?')
 
             run = {
                 'workflowId': str(row['workflow_id']),
-                'gitid': str(row['gitid']),  # Keep the gitid field
-                'commitHash': str(row['commithash']),  # Use commithash instead
+                'gitid': str(row['gitid']),
+                'commitHash': str(row['commithash']),
                 'createTime': row['createtime'].isoformat() if row['createtime'] else None,
                 'repo': row['repo'],
                 'branch': row['branchname'],
                 'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
                 'workflowUrl': row['workflow_url'],
+                'workflowname': row['workflowname'],
+                'conclusion': row['conclusion'],
+                'os': row['os'],
                 'results': results
             }
             runs.append(run)
