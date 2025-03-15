@@ -82,18 +82,56 @@ const WaterfallView = () => {
   const [selectedRepo, setSelectedRepo] = useState('iree-org/iree');
   const [selectedBranch, setSelectedBranch] = useState('main');
   const [showFilterHelp, setShowFilterHelp] = useState(false);
+  const [availableRepos, setAvailableRepos] = useState([
+    { id: 'iree-org/iree', name: 'IREE' },
+    { id: 'iree-org/iree-test-suites', name: 'IREE Test Suites' },
+    { id: 'iree-org/iree-turbine', name: 'IREE Turbine' },
+    { id: 'nod-ai/shark-ai', name: 'SHARK' },
+    { id: 'nod-ai/SHARK-TestSuite', name: 'SHARK Test Suite' },
+    { id: 'eliasj42/iree', name: 'Elias IREE' },
+  ]);
 
   // Select workflows based on the selected repository
   const workflows = REPO_WORKFLOWS[selectedRepo] || DEFAULT_WORKFLOWS;
+
+  // Fetch available repositories (could be moved to a separate API endpoint)
+  useEffect(() => {
+    const fetchRepos = async () => {
+      try {
+        const response = await fetch('/api/metrics/repos', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Format repos for dropdown
+          const formattedRepos = data.map(repo => ({
+            id: repo.name,
+            name: repo.name.split('/').pop() // Extract the repo name after the slash
+          }));
+          setAvailableRepos(formattedRepos);
+        }
+      } catch (error) {
+        console.error('Error fetching repos:', error);
+        // Keep the hardcoded repos as fallback
+      }
+    };
+    
+    fetchRepos();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const queryParams = new URLSearchParams({
-          days: '14', // Increased to 14 days to get more results
+          days: '30', // Increased to 30 days to get more results
           repo: selectedRepo === 'all' ? '' : selectedRepo,
-          branch: selectedBranch
+          branch: selectedBranch === 'all' ? '' : selectedBranch
         }).toString();
         
         console.log('Fetching from:', `/api/metrics/workflowruns?${queryParams}`);
@@ -217,7 +255,7 @@ const WaterfallView = () => {
     );
   });
 
-  const branches = ['main']; // Only show main branch
+  const branches = ['all', 'main', 'master', 'develop']; // Include all branches option
 
   if (loading && workflowRuns.length === 0) {
     return (
@@ -248,10 +286,14 @@ const WaterfallView = () => {
             <select
               value={selectedRepo}
               onChange={(e) => setSelectedRepo(e.target.value)}
-              className="w-48 px-2 py-1 border rounded text-sm"
+              className="w-64 px-2 py-1 border rounded text-sm"
             >
-              <option value="iree-org/iree">IREE</option>
-              <option value="nod-ai/shark-ai">Shark</option>
+              <option value="all">All Repositories</option>
+              {availableRepos.map(repo => (
+                <option key={repo.id} value={repo.id}>
+                  {repo.name}
+                </option>
+              ))}
             </select>
           </div>
           
@@ -369,9 +411,11 @@ const WaterfallView = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-gray-900 hover:underline"
-                      title="View commit details"
+                      title={run.commitMessage || 'No message available'}
                     >
-                      {run.commitMessage || 'No message available'}
+                      {(run.commitMessage || 'No message available').length > 80 
+                        ? (run.commitMessage || 'No message available').substring(0, 80) + '...' 
+                        : (run.commitMessage || 'No message available')}
                     </a>
                   </td>
                   <td className="px-2 py-1 text-gray-500">
