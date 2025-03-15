@@ -47,7 +47,7 @@ const WaterfallView = () => {
         }
         
         const data = await response.json();
-        console.log('Workflow data:', data);
+        console.log('Workflow data sample:', data[0]); // Log first item to check structure
         
         if (data.error) {
           throw new Error(data.error);
@@ -95,12 +95,6 @@ const WaterfallView = () => {
       </div>
     );
   }
-
-  // Function to convert API URL to GitHub web URL
-  const convertToWebUrl = (apiUrl) => {
-    if (!apiUrl) return '';
-    return apiUrl.replace('api.github.com/repos', 'github.com');
-  };
 
   return (
     <div className="p-4">
@@ -151,7 +145,7 @@ const WaterfallView = () => {
                 <td className="px-2 py-1 font-mono whitespace-nowrap">
                   {run.workflowUrl ? (
                     <a 
-                      href={convertToWebUrl(run.workflowUrl)}
+                      href={run.workflowUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
@@ -159,7 +153,14 @@ const WaterfallView = () => {
                       {run.commitHash.substring(0, 7)}
                     </a>
                   ) : (
-                    <span>{run.commitHash.substring(0, 7)}</span>
+                    <a 
+                      href={`https://github.com/${run.repo}/commit/${run.commitHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {run.commitHash.substring(0, 7)}
+                    </a>
                   )}
                 </td>
                 <td className="px-2 py-1">
@@ -169,7 +170,7 @@ const WaterfallView = () => {
                     rel="noopener noreferrer"
                     className="text-gray-900 hover:underline"
                   >
-                    {run.commitMessage}
+                    {run.commitMessage || 'No message available'}
                   </a>
                 </td>
                 <td className="px-2 py-1 text-gray-500">
