@@ -120,7 +120,7 @@ def get_workflow_runs():
         days = request.args.get('days', default=7, type=int)
         repo_filter = request.args.get('repo', default=None)
         
-        # Updated query to properly handle workflow runs and commits
+        # Updated query to include the workflow URL
         query = """
             SELECT 
                 wr.id as workflow_id,
@@ -129,6 +129,7 @@ def get_workflow_runs():
                 wr.createtime,
                 wr.repo,
                 wr.branchname,
+                wr.url as workflow_url,
                 c.message as commit_message,
                 GROUP_CONCAT(
                     DISTINCT
@@ -165,6 +166,7 @@ def get_workflow_runs():
                 wr.createtime,
                 wr.repo,
                 wr.branchname,
+                wr.url,
                 c.message 
             ORDER BY wr.createtime DESC
         """
@@ -198,6 +200,7 @@ def get_workflow_runs():
                 'branch': row['branchname'],
                 'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
+                'workflowUrl': row['workflow_url'],  # Added the workflow URL
                 'results': results
             }
             runs.append(run)
@@ -211,31 +214,6 @@ def get_workflow_runs():
     except Exception as e:
         app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
-@app.route('/api/test-db')
-def test_db():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        
-        # Check total count of workflowruns
-        cursor.execute("SELECT COUNT(*) as total FROM workflowruns")
-        count_result = cursor.fetchone()
-        
-        # Check the most recent records
-        cursor.execute("SELECT id, gitid, author, createtime, repo FROM workflowruns ORDER BY createtime DESC LIMIT 5")
-        sample_data = cursor.fetchall()
-        
-        cursor.close()
-        conn.close()
-        
-        return jsonify({
-            "status": "connected",
-            "total_records": count_result['total'],
-            "sample_data": sample_data
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
     
 @app.route('/api/test-simple-query')
 def test_simple_query():
