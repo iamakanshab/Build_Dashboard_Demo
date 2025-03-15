@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, HelpCircle, Filter } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../ui/tooltip';
-import { Badge } from '../ui/badge';
 
 // Repository-specific workflow configurations
 const REPO_WORKFLOWS = {
@@ -40,59 +33,45 @@ const DEFAULT_WORKFLOWS = [
 const StatusIcon = ({ status, url }) => {
   let icon;
   let color;
-  let tooltip;
+  let title;
 
   switch (status) {
     case 'O':
       icon = '●';
       color = 'text-green-500';
-      tooltip = 'Success';
+      title = 'Success - Click to view logs';
       break;
     case 'X':
       icon = '✕';
       color = 'text-red-500';
-      tooltip = 'Failed';
+      title = 'Failed - Click to view logs';
       break;
     case '?':
       icon = '○';
       color = 'text-gray-400';
-      tooltip = 'Unknown/Pending';
+      title = 'Unknown/Pending';
       break;
     default:
       icon = '○';
       color = 'text-gray-400';
-      tooltip = 'Unknown/Pending';
+      title = 'Unknown/Pending';
   }
 
   if (url) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <a href={url} target="_blank" rel="noopener noreferrer" className={`${color} hover:opacity-80`}>
-              {icon}
-            </a>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{tooltip} - Click to view logs</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <a 
+        href={url} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className={`${color} hover:opacity-80`} 
+        title={title}
+      >
+        {icon}
+      </a>
     );
   }
 
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger>
-          <span className={color}>{icon}</span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+  return <span className={color} title={title}>{icon}</span>;
 };
 
 const WaterfallView = () => {
@@ -264,7 +243,7 @@ const WaterfallView = () => {
                 onClick={() => setShowFilterHelp(!showFilterHelp)}
                 className="ml-1 text-gray-500 hover:text-gray-700"
               >
-                <HelpCircle size={14} />
+                ?
               </button>
             </label>
             <input
@@ -293,18 +272,13 @@ const WaterfallView = () => {
         <div className="flex flex-wrap gap-1 items-center">
           <span className="text-sm font-medium">Workflows:</span>
           {workflows.map(workflow => (
-            <TooltipProvider key={workflow.id}>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="text-xs">
-                    {workflow.display}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{workflow.description}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <span 
+              key={workflow.id} 
+              className="inline-flex items-center border px-2 py-0.5 rounded-full text-xs bg-gray-100"
+              title={workflow.description}
+            >
+              {workflow.display}
+            </span>
           ))}
         </div>
       </div>
@@ -363,6 +337,7 @@ const WaterfallView = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-gray-900 hover:underline"
+                      title="View commit details"
                     >
                       {run.commitMessage || 'No message available'}
                     </a>
