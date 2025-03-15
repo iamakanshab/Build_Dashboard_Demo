@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 
-// Remove hardcoded API_URL since we're using relative paths
-// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
 const StatusIcon = ({ status }) => {
   switch (status) {
     case 'O':
@@ -99,6 +96,12 @@ const WaterfallView = () => {
     );
   }
 
+  // Function to convert API URL to GitHub web URL
+  const convertToWebUrl = (apiUrl) => {
+    if (!apiUrl) return '';
+    return apiUrl.replace('api.github.com/repos', 'github.com');
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-xl font-semibold mb-4">GitHub Workflow Dashboard</h1>
@@ -146,17 +149,28 @@ const WaterfallView = () => {
                   {new Date(run.createTime).toLocaleTimeString()}
                 </td>
                 <td className="px-2 py-1 font-mono whitespace-nowrap">
+                  {run.workflowUrl ? (
+                    <a 
+                      href={convertToWebUrl(run.workflowUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {run.commitHash.substring(0, 7)}
+                    </a>
+                  ) : (
+                    <span>{run.commitHash.substring(0, 7)}</span>
+                  )}
+                </td>
+                <td className="px-2 py-1">
                   <a 
                     href={`https://github.com/${run.repo}/commit/${run.commitHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
+                    className="text-gray-900 hover:underline"
                   >
-                    {run.commitHash.substring(0, 7)}
+                    {run.commitMessage}
                   </a>
-                </td>
-                <td className="px-2 py-1">
-                  <span className="text-gray-900">{run.commitMessage}</span>
                 </td>
                 <td className="px-2 py-1 text-gray-500">
                   {run.author}
