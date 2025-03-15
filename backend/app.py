@@ -119,12 +119,14 @@ def get_workflow_runs():
         
         days = request.args.get('days', default=7, type=int)
         repo_filter = request.args.get('repo', default=None)
+        branch_filter = request.args.get('branch', default='main', type=str)  # Add branch filter
         
-        # Updated query to include the workflow URL
+        # Updated query to properly handle workflow runs and commits
         query = """
             SELECT 
                 wr.id as workflow_id,
-                wr.gitid as commit_hash,
+                wr.gitid,
+                wr.commithash,  # This is what we need for the commit hash
                 wr.author,
                 wr.createtime,
                 wr.repo,
@@ -157,11 +159,16 @@ def get_workflow_runs():
         if repo_filter and repo_filter != 'all':
             query += " AND wr.repo = %s"
             params.append(repo_filter)
+        
+        if branch_filter:
+            query += " AND wr.branchname = %s"
+            params.append(branch_filter)
             
         query += """
             GROUP BY 
                 wr.id, 
                 wr.gitid,
+                wr.commithash,
                 wr.author,
                 wr.createtime,
                 wr.repo,
@@ -194,13 +201,14 @@ def get_workflow_runs():
 
             run = {
                 'workflowId': str(row['workflow_id']),
-                'commitHash': str(row['commit_hash']),
+                'gitid': str(row['gitid']),  # Keep the gitid field
+                'commitHash': str(row['commithash']),  # Use commithash instead
                 'createTime': row['createtime'].isoformat() if row['createtime'] else None,
                 'repo': row['repo'],
                 'branch': row['branchname'],
                 'commitMessage': row['commit_message'] or '',
                 'author': row['author'],
-                'workflowUrl': row['workflow_url'],  # Added the workflow URL
+                'workflowUrl': row['workflow_url'],
                 'results': results
             }
             runs.append(run)
@@ -214,62 +222,6 @@ def get_workflow_runs():
     except Exception as e:
         app.logger.error(f"Workflow runs error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-    
-@app.route('/api/test-simple-query')
-def test_simple_query():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        
-        # Simpler query without complex joins or GROUP BY
-        cursor.execute("""
-            SELECT 
-                id, gitid, author, createtime, repo, branchname, workflowname
-            FROM workflowruns
-            WHERE createtime >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            LIMIT 10
-        """)
-        
-        results = cursor.fetchall()
-        
-        cursor.close()
-        conn.close()
-        
-        app.logger.info(f"Simple query returned {len(results)} rows")
-        return jsonify(results)
-    except Exception as e:
-        app.logger.error(f"Simple query error: {str(e)}")
-        return jsonify({"error": str(e)})
-
-@app.route('/api/test-dates')
-def test_dates():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get the server's current time
-        cursor.execute("SELECT NOW() as server_time")
-        server_time = cursor.fetchone()
-        
-        # Get min and max dates in the workflowruns table
-        cursor.execute("SELECT MIN(createtime) as min_date, MAX(createtime) as max_date FROM workflowruns")
-        date_range = cursor.fetchone()
-        
-        cursor.close()
-        conn.close()
-        
-        # Include Python's datetime for comparison
-        from datetime import datetime
-        python_now = datetime.now()
-        
-        return jsonify({
-            "server_time": server_time['server_time'].isoformat() if server_time else None,
-            "python_time": python_now.isoformat(),
-            "min_date": date_range['min_date'].isoformat() if date_range and date_range['min_date'] else None,
-            "max_date": date_range['max_date'].isoformat() if date_range and date_range['max_date'] else None
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)})
 
 @app.route('/api/db-schema')
 def db_schema():
