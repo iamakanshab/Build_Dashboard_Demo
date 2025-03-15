@@ -347,18 +347,14 @@ const WaterfallView = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
+                        title="View workflow run"
                       >
                         {run.commitHash.substring(0, 7)}
                       </a>
                     ) : (
-                      <a 
-                        href={`https://github.com/${run.repo}/commit/${run.commitHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
+                      <span className="text-gray-700">
                         {run.commitHash.substring(0, 7)}
-                      </a>
+                      </span>
                     )}
                   </td>
                   <td className="px-2 py-1">
