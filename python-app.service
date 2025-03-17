@@ -1,0 +1,12 @@
+[Unit]
+Description=Python Web Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /home/ubuntu/app/Build_Dashboard_Demo/backend/app.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
