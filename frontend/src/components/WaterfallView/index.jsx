@@ -87,7 +87,8 @@ const WaterfallView = () => {
     { id: 'iree-org/iree-test-suites', name: 'IREE Test Suites' },
     { id: 'iree-org/iree-turbine', name: 'IREE Turbine' },
     { id: 'nod-ai/shark-ai', name: 'SHARK' },
-    { id: 'nod-ai/SHARK-TestSuite', name: 'SHARK Test Suite' }
+    { id: 'nod-ai/SHARK-TestSuite', name: 'SHARK Test Suite' },
+    // Removed: { id: 'eliasj42/iree', name: 'Elias IREE' }
   ]);
 
   // Select workflows based on the selected repository
@@ -107,11 +108,13 @@ const WaterfallView = () => {
         
         if (response.ok) {
           const data = await response.json();
-          // Format repos for dropdown
-          const formattedRepos = data.map(repo => ({
-            id: repo.name,
-            name: repo.name.split('/').pop() // Extract the repo name after the slash
-          }));
+          // Format repos for dropdown and exclude eliasj42/iree
+          const formattedRepos = data
+            .filter(repo => repo.name !== 'eliasj42/iree')
+            .map(repo => ({
+              id: repo.name,
+              name: repo.name.split('/').pop() // Extract the repo name after the slash
+            }));
           setAvailableRepos(formattedRepos);
         }
       } catch (error) {
