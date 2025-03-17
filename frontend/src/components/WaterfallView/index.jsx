@@ -87,8 +87,7 @@ const WaterfallView = () => {
     { id: 'iree-org/iree-test-suites', name: 'IREE Test Suites' },
     { id: 'iree-org/iree-turbine', name: 'IREE Turbine' },
     { id: 'nod-ai/shark-ai', name: 'SHARK' },
-    { id: 'nod-ai/SHARK-TestSuite', name: 'SHARK Test Suite' },
-    { id: 'eliasj42/iree', name: 'Elias IREE' },
+    { id: 'nod-ai/SHARK-TestSuite', name: 'SHARK Test Suite' }
   ]);
 
   // Select workflows based on the selected repository
