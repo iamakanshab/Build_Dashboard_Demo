@@ -19,7 +19,7 @@ app.logger.addHandler(handler)
 db_config = {
     'host': 'shark-dashboard-db.c3kwuosg6kjs.us-east-2.rds.amazonaws.com',
     'user': 'admin',
-    'password': 'nQR~4v8vI7iy>!fB4|*Q!dX:]JMB',
+    'password': 'JEWr59?iAH9!tN0_nq$Wn:t2D9!]',
     'database': 'shark_dashboard_db',
     'port': 3306
 }
